@@ -9,10 +9,7 @@ LendSmart/
 ├── backend/            # Node.js / Express REST API
 ├── blockchain/         # Solidity smart contracts (Hardhat + Truffle)
 ├── ml_services/        # Python ML models & compliance framework
-├── docker-compose.yml  # Full-stack orchestration
-├── Dockerfile          # Backend production image
-├── .env.example        # Environment variable reference
-└── requirements.txt    # Root-level Python dev dependencies
+└── README.md           # This file
 ```
 
 ---
@@ -30,12 +27,13 @@ LendSmart/
 
 ```bash
 git clone https://github.com/your-org/lendsmart.git
-cd lendsmart
-cp .env.example .env          # Fill in secrets
+cd lendsmart/code
 cp backend/.env.example backend/.env
 ```
 
 ### 2 – Docker Compose (recommended)
+
+Each service ships its own `Dockerfile`. Use the `docker-compose.yml` provided at the repo root (outside this `code/` directory) to spin up the full stack:
 
 ```bash
 docker compose up --build

@@ -1,70 +1,57 @@
 ---
 # roles/database/tasks/main.yml
-- name: Install database packages
+- name: Add MongoDB yum repository
+  ansible.builtin.yum_repository:
+    name: mongodb-org-7.0
+    description: MongoDB Repository
+    baseurl: https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/7.0/x86_64/
+    gpgcheck: true
+    enabled: true
+    gpgkey: https://pgp.mongodb.com/server-7.0.asc
+
+- name: Install MongoDB packages
   ansible.builtin.yum:
     name:
-      - mariadb-server
-      - mariadb
-      - python3-PyMySQL
+      - mongodb-org
+      - python3-pymongo
     state: present
 
-- name: Configure MariaDB
+- name: Configure MongoDB
   ansible.builtin.template:
-    src: my.cnf.j2
-    dest: /etc/my.cnf.d/server.cnf
+    src: mongod.conf.j2
+    dest: /etc/mongod.conf
     owner: root
     group: root
     mode: "0644"
-  notify: Restart MariaDB
+  notify: Restart MongoDB
 
-- name: Start and enable MariaDB
+- name: Start and enable MongoDB
   ansible.builtin.systemd:
-    name: mariadb
+    name: mongod
     state: started
-    enabled: yes
+    enabled: true
 
-- name: Set root password
-  community.mysql.mysql_user:
-    name: root
+- name: Create MongoDB administrative user
+  community.mongodb.mongodb_user:
+    login_port: 27017
+    database: admin
+    name: "{{ db_root_username | default('root') }}"
     password: "{{ db_root_password }}"
-    host_all: yes
+    roles: root
     state: present
-    login_unix_socket: /var/lib/mysql/mysql.sock
   no_log: true
-
-- name: Remove anonymous users
-  community.mysql.mysql_user:
-    name: ""
-    host_all: yes
-    state: absent
-    login_user: root
-    login_password: "{{ db_root_password }}"
-  no_log: true
-
-- name: Remove test database
-  community.mysql.mysql_db:
-    name: test
-    state: absent
-    login_user: root
-    login_password: "{{ db_root_password }}"
-  no_log: true
-
-- name: Create application database
-  community.mysql.mysql_db:
-    name: "{{ db_name }}"
-    state: present
-    encoding: utf8mb4
-    collation: utf8mb4_unicode_ci
-    login_user: root
-    login_password: "{{ db_root_password }}"
 
 - name: Create application database user
-  community.mysql.mysql_user:
+  community.mongodb.mongodb_user:
+    login_user: "{{ db_root_username | default('root') }}"
+    login_password: "{{ db_root_password }}"
+    login_port: 27017
+    login_database: admin
+    database: "{{ db_name }}"
     name: "{{ db_user }}"
     password: "{{ db_password }}"
-    priv: "{{ db_name }}.*:ALL"
-    host: "%"
+    roles:
+      - db: "{{ db_name }}"
+        role: readWrite
     state: present
-    login_user: root
-    login_password: "{{ db_root_password }}"
   no_log: true

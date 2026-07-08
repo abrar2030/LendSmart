@@ -310,7 +310,7 @@ const collectionCache = new Map();
 
 function makeMockCollection(name) {
   if (collectionCache.has(name)) return collectionCache.get(name);
-  return {
+  const col = {
     collectionName: name,
     insertOne: async (doc) => {
       if (!doc._id) doc._id = new mongoose.Types.ObjectId();

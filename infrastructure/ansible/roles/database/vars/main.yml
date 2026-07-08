@@ -1,7 +1,5 @@
 ---
 # roles/database/vars/main.yml
-# Default values — override these via group_vars/all/vault.yml using ansible-vault
+# Default values — override via group_vars using ansible-vault for secrets.
 db_max_connections: 150
-db_max_allowed_packet: "64M"
-db_innodb_buffer_pool_size: "256M"
-db_innodb_log_file_size: "64M"
+db_root_username: root

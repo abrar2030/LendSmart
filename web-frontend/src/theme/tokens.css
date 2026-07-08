@@ -1,0 +1,88 @@
+/*
+ * LendSmart design tokens.
+ * Single source of truth for the visual identity, shared in intent with the
+ * mobile theme (mobile-frontend/src/theme/tokens.js mirrors these values).
+ * Identity: peer-to-peer and on-chain lending. Trust, transparency, the flow of
+ * money between people. Electric indigo for action, jade for positive and
+ * approved states, deep navy ink, and monospace tabular figures for every
+ * amount and rate (the "ledger" signature).
+ */
+
+:root {
+  /* Color: brand */
+  --ls-primary: #2743e0;
+  --ls-primary-600: #1e34b8;
+  --ls-primary-700: #17298f;
+  --ls-primary-050: #eef1fe;
+
+  --ls-accent: #12b886;
+  --ls-accent-600: #0e9d74;
+  --ls-accent-050: #e6f7f1;
+
+  --ls-danger: #e8590c;
+  --ls-danger-050: #fdece2;
+  --ls-warning: #f08c00;
+
+  /* Color: ink and surfaces */
+  --ls-ink: #0c1424;
+  --ls-ink-800: #16213a;
+  --ls-text: #0c1424;
+  --ls-text-muted: #5a6b85;
+  --ls-text-faint: #8695ab;
+
+  --ls-surface: #ffffff;
+  --ls-surface-muted: #f5f7fb;
+  --ls-surface-sunken: #eef1f7;
+  --ls-border: #e4e9f2;
+  --ls-border-strong: #cdd6e5;
+
+  /* Typography */
+  --ls-font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --ls-font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ls-font-mono:
+    "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  --ls-text-xs: 0.75rem;
+  --ls-text-sm: 0.875rem;
+  --ls-text-base: 1rem;
+  --ls-text-lg: 1.125rem;
+  --ls-text-xl: 1.375rem;
+  --ls-text-2xl: 1.875rem;
+  --ls-text-3xl: 2.5rem;
+  --ls-text-4xl: 3.5rem;
+
+  --ls-weight-regular: 400;
+  --ls-weight-medium: 500;
+  --ls-weight-semibold: 600;
+  --ls-weight-bold: 700;
+
+  /* Spacing scale (4px base) */
+  --ls-space-1: 0.25rem;
+  --ls-space-2: 0.5rem;
+  --ls-space-3: 0.75rem;
+  --ls-space-4: 1rem;
+  --ls-space-5: 1.5rem;
+  --ls-space-6: 2rem;
+  --ls-space-8: 3rem;
+  --ls-space-10: 4rem;
+  --ls-space-12: 6rem;
+
+  /* Radii */
+  --ls-radius-sm: 6px;
+  --ls-radius-md: 10px;
+  --ls-radius-lg: 16px;
+  --ls-radius-pill: 999px;
+
+  /* Elevation */
+  --ls-shadow-sm:
+    0 1px 2px rgba(12, 20, 36, 0.06), 0 1px 3px rgba(12, 20, 36, 0.08);
+  --ls-shadow-md:
+    0 4px 12px rgba(12, 20, 36, 0.08), 0 2px 4px rgba(12, 20, 36, 0.05);
+  --ls-shadow-lg:
+    0 12px 32px rgba(12, 20, 36, 0.12), 0 4px 8px rgba(12, 20, 36, 0.06);
+
+  /* Motion */
+  --ls-ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ls-dur-fast: 120ms;
+  --ls-dur: 220ms;
+}

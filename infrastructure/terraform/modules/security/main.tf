@@ -69,9 +69,9 @@ resource "aws_security_group" "db" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "MySQL/Aurora from app servers only"
-    from_port       = 3306
-    to_port         = 3306
+    description     = "MongoDB/DocumentDB from app servers only"
+    from_port       = 27017
+    to_port         = 27017
     protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
   }

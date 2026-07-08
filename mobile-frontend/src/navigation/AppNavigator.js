@@ -1,16 +1,20 @@
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useContext} from 'react';
-import {ActivityIndicator, View} from 'react-native';
-import {useTheme} from 'react-native-paper';
-import {AuthContext} from '../contexts/AuthContext';
-import AuthNavigator from './AuthNavigator';
-import MainTabNavigator from './MainTabNavigator';
+import {
+  DarkTheme as NavDarkTheme,
+  DefaultTheme as NavDefaultTheme,
+  NavigationContainer,
+} from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useContext } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { useTheme } from "react-native-paper";
+import { AuthContext } from "../contexts/AuthContext";
+import AuthNavigator from "./AuthNavigator";
+import MainTabNavigator from "./MainTabNavigator";
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
-  const {token, loading} = useContext(AuthContext);
+  const { token, loading } = useContext(AuthContext);
   const theme = useTheme();
 
   if (loading) {
@@ -19,18 +23,34 @@ const AppNavigator = () => {
       <View
         style={{
           flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
+          justifyContent: "center",
+          alignItems: "center",
           backgroundColor: theme.colors.background,
-        }}>
+        }}
+      >
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
+  const navBase = theme.dark ? NavDarkTheme : NavDefaultTheme;
+  const navigationTheme = {
+    ...navBase,
+    dark: !!theme.dark,
+    colors: {
+      ...navBase.colors,
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.textPrimary || theme.colors.text,
+      border: theme.colors.border,
+      notification: theme.colors.notification || theme.colors.secondary,
+    },
+  };
+
   return (
-    <NavigationContainer theme={{dark: theme.dark, colors: theme.colors}}>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         {token ? (
           // User is signed in
           <Stack.Screen name="MainApp" component={MainTabNavigator} />

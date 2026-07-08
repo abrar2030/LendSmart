@@ -283,9 +283,9 @@ class LoanController {
    * @param {Object} res - Express response object
    */
   async fundLoan(req, res) {
+    const loanId = req.params.id || req.params.loanId;
     try {
       const lenderId = req.user.id;
-      const loanId = req.params.id || req.params.loanId;
       const { fundingAmount, paymentMethod, walletAddress } = req.body;
 
       // Get loan
@@ -459,9 +459,9 @@ class LoanController {
    * @param {Object} res - Express response object
    */
   async makeRepayment(req, res) {
+    const loanId = req.params.id || req.params.loanId;
     try {
       const userId = req.user.id;
-      const loanId = req.params.id || req.params.loanId;
       const { amount, paymentMethod, walletAddress } = req.body;
 
       // Get loan

@@ -81,8 +81,8 @@ main() {
     start_total=$(date +%s)
 
     # Smart Contracts Tests
-    if [ -d "$PROJECT_ROOT/smart-contracts" ]; then
-        cd "$PROJECT_ROOT/smart-contracts"
+    if [ -d "$PROJECT_ROOT/code/blockchain" ]; then
+        cd "$PROJECT_ROOT/code/blockchain"
         run_test "Smart Contracts" "npm test"
         if [ $? -ne 0 ]; then overall_success=false; fi
         cd "$PROJECT_ROOT"
@@ -92,8 +92,8 @@ main() {
     fi
 
     # Backend Tests
-    if [ -d "$PROJECT_ROOT/backend" ]; then
-        cd "$PROJECT_ROOT/backend"
+    if [ -d "$PROJECT_ROOT/code/backend" ]; then
+        cd "$PROJECT_ROOT/code/backend"
         run_test "Backend" "npm test"
         if [ $? -ne 0 ]; then overall_success=false; fi
         cd "$PROJECT_ROOT"
@@ -125,8 +125,8 @@ main() {
     fi
 
     # ML Model Tests
-    if [ -d "$PROJECT_ROOT/ml-model" ]; then
-        cd "$PROJECT_ROOT/ml-model"
+    if [ -d "$PROJECT_ROOT/code/ml_services" ]; then
+        cd "$PROJECT_ROOT/code/ml_services"
         # Create and activate virtual environment if needed
         if [ ! -d "$PROJECT_ROOT/venv" ]; then
             python3 -m venv "$PROJECT_ROOT/venv"

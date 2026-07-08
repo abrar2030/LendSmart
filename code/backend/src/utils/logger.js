@@ -362,7 +362,7 @@ const sanitizeForLogging = (data) => {
 
   const sanitizeObject = (obj) => {
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const lowerKey = key.toLowerCase();
 
         if (sensitiveFields.some((field) => lowerKey.includes(field))) {

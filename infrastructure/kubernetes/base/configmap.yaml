@@ -12,7 +12,7 @@ data:
   REDIS_HOST: "lendsmart-redis"
   REDIS_PORT: "6379"
   DB_HOST: "lendsmart-database"
-  DB_PORT: "3306"
+  DB_PORT: "27017"
   CORS_ORIGIN: "https://lendsmart.example.com"
   RATE_LIMIT_WINDOW_MS: "900000"
   RATE_LIMIT_MAX_REQUESTS: "100"

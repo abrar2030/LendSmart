@@ -17,7 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "../contexts/ApiContext";
 import { useBlockchain } from "../contexts/BlockchainContext";
@@ -47,11 +47,7 @@ const LoanDetails = () => {
   const [privateKey, setPrivateKey] = useState("");
   const [repayAmount, setRepayAmount] = useState("");
 
-  useEffect(() => {
-    fetchLoanDetails();
-  }, [fetchLoanDetails]);
-
-  const fetchLoanDetails = async () => {
+  const fetchLoanDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -70,7 +66,11 @@ const LoanDetails = () => {
       setError("Failed to fetch loan details");
       setLoading(false);
     }
-  };
+  }, [getLoan, id, getBlockchainLoanDetails]);
+
+  useEffect(() => {
+    fetchLoanDetails();
+  }, [fetchLoanDetails]);
 
   const handleFundLoan = async () => {
     if (!isConnected) {

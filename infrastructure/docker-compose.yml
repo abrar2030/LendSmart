@@ -6,7 +6,7 @@
 version: "3.9"
 
 services:
-  # ── Database ───────────────────────────────────────────────────────────────
+  # ── Database (MongoDB — matches the backend's mongoose driver) ──────────────
   database:
     build:
       context: .
@@ -14,26 +14,15 @@ services:
     container_name: lendsmart-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-lendsmartdb}
-      MYSQL_USER: ${MYSQL_USER:-appuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-rootpassword}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-lendsmartdb}
     ports:
-      - "3306:3306"
+      - "27017:27017"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/data/db
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD:-rootpassword}",
-        ]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,8 +51,8 @@ services:
   # ── Backend ────────────────────────────────────────────────────────────────
   backend:
     build:
-      context: ../backend
-      dockerfile: ../infrastructure/docker/Dockerfile.backend
+      context: ../code/backend
+      dockerfile: ../../infrastructure/docker/Dockerfile.backend
     container_name: lendsmart-backend
     restart: unless-stopped
     depends_on:
@@ -74,7 +63,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
-      DATABASE_URL: mysql://${MYSQL_USER:-appuser}:${MYSQL_PASSWORD:-apppassword}@database:3306/${MYSQL_DATABASE:-lendsmartdb}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@database:27017/${MONGO_DATABASE:-lendsmartdb}?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-prod}
@@ -82,7 +71,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ../backend:/app
+      - ../code/backend:/app
       - /app/node_modules
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
@@ -96,10 +85,10 @@ services:
   # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:
     build:
-      context: ../frontend
+      context: ../web-frontend
       dockerfile: ../infrastructure/docker/Dockerfile.frontend
       args:
-        REACT_APP_API_URL: http://localhost:3000
+        REACT_APP_API_URL: /api
         REACT_APP_ENV: development
     container_name: lendsmart-frontend
     restart: unless-stopped

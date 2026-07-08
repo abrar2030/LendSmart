@@ -13,6 +13,7 @@ echo "Starting LendSmart Environment Setup..."
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 VENV_PATH="$PROJECT_ROOT/venv"
 BACKEND_DIR="$PROJECT_ROOT/code/backend"
+ML_SERVICES_DIR="$PROJECT_ROOT/code/ml_services"
 CODE_BLOCKCHAIN_DIR="$PROJECT_ROOT/code/blockchain"
 WEB_FRONTEND_DIR="$PROJECT_ROOT/web-frontend"
 MOBILE_FRONTEND_DIR="$PROJECT_ROOT/mobile-frontend"
@@ -109,24 +110,37 @@ echo "--------------------------------------------------------------------------
 echo "Setting up Project Components..."
 echo "-----------------------------------------------------------------------------"
 
-# 1. Backend Setup (Python/Flask)
+# 1. Backend Setup (Node.js/Express)
 if [ -d "$BACKEND_DIR" ]; then
-    echo "Setting up Backend (Python/Flask) in $BACKEND_DIR ..."
-    
+    echo "Setting up Backend (Node.js/Express) in $BACKEND_DIR ..."
+    (
+        cd "$BACKEND_DIR"
+        echo "Installing backend dependencies..."
+        npm install
+    )
+    echo "Backend setup complete."
+else
+    echo "Warning: Backend directory '$BACKEND_DIR' not found. Skipping backend setup."
+fi
+
+# 1b. ML Services Setup (Python/Flask)
+if [ -d "$ML_SERVICES_DIR" ]; then
+    echo "Setting up ML Services (Python/Flask) in $ML_SERVICES_DIR ..."
+
     # Create a virtual environment in the project root
     if [ ! -d "$VENV_PATH" ]; then
         echo "Creating Python virtual environment in project root ($VENV_PATH)..."
         python3 -m venv "$VENV_PATH"
     fi
-    
-    echo "Activating virtual environment and installing backend dependencies..."
+
+    echo "Activating virtual environment and installing ML service dependencies..."
     source "$VENV_PATH/bin/activate"
     pip install --upgrade pip
-    pip install -r "$BACKEND_DIR/requirements.txt"
+    pip install -r "$ML_SERVICES_DIR/requirements.txt"
     deactivate
-    echo "Backend setup complete."
+    echo "ML Services setup complete."
 else
-    echo "Warning: Backend directory '$BACKEND_DIR' not found. Skipping backend setup."
+    echo "Warning: ML Services directory '$ML_SERVICES_DIR' not found. Skipping ML services setup."
 fi
 
 # 2. Blockchain Setup (Solidity/Truffle)
@@ -155,8 +169,8 @@ if [ -d "$MOBILE_FRONTEND_DIR" ]; then
     echo "Setting up Mobile Frontend (React Native) in $MOBILE_FRONTEND_DIR ..."
     (
         cd "$MOBILE_FRONTEND_DIR"
-        echo "Installing mobile-frontend dependencies using Yarn..."
-        yarn install
+        echo "Installing mobile-frontend dependencies (Expo, npm)..."
+        npm install --legacy-peer-deps
     )
     echo "Mobile Frontend setup complete."
 else

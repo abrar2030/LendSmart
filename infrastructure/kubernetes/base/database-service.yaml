@@ -10,9 +10,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-    - port: 3306
-      targetPort: 3306
+    - port: 27017
+      targetPort: 27017
       protocol: TCP
-      name: mysql
+      name: mongodb
   selector:
     app: database

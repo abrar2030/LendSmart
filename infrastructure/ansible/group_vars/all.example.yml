@@ -10,7 +10,7 @@ app_port: 3000
 
 # Database Configuration
 db_host: localhost
-db_port: 3306
+db_port: 27017
 db_name: lendsmart_db
 # DO NOT store passwords here! Use Ansible Vault instead:
 # ansible-vault create group_vars/all/vault.yml

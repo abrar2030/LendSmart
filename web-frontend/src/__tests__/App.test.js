@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
 import App from "../App";
 
 // Mock the contexts
@@ -24,11 +25,19 @@ jest.mock("../contexts/ApiContext", () => ({
 
 describe("App Component", () => {
   test("renders without crashing", () => {
-    render(<App />);
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>,
+    );
   });
 
   test("renders header and footer", () => {
-    render(<App />);
-    expect(screen.getByText(/LENDSMART/i)).toBeInTheDocument();
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>,
+    );
+    expect(screen.getAllByText(/LENDSMART/i)[0]).toBeInTheDocument();
   });
 });

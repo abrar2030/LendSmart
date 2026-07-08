@@ -1,120 +1,84 @@
+@import "./theme/tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--ls-font-body);
+  font-size: var(--ls-text-base);
+  line-height: 1.55;
+  color: var(--ls-text);
+  background-color: var(--ls-surface-muted);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f4f7f6;
-  color: #333;
 }
 
-code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--ls-font-display);
+  color: var(--ls-ink);
+  line-height: 1.15;
+  margin: 0 0 var(--ls-space-3);
+  letter-spacing: -0.01em;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* Basic Navbar Styling */
-.navbar {
-  background-color: #007bff;
-  padding: 1rem 2rem;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.navbar a {
-  color: white;
-  text-decoration: none;
-  margin: 0 0.5rem;
-  font-size: 1.1rem;
-}
-
-.navbar ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-}
-
-.navbar ul li {
-  margin-left: 1rem;
-}
-
-/* Basic Footer Styling */
-.footer {
-  background-color: #343a40;
-  color: white;
-  text-align: center;
-  padding: 1rem 0;
-  position: relative; /* Changed from fixed to relative for better flow */
-  bottom: 0;
-  width: 100%;
-  margin-top: 2rem; /* Add some space above the footer */
-}
-
-/* General Link Styling */
 a {
-  color: #007bff;
+  color: var(--ls-primary);
   text-decoration: none;
 }
-
 a:hover {
   text-decoration: underline;
 }
 
-/* Button Styling (example) */
-button,
-.button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+code,
+kbd,
+samp {
+  font-family: var(--ls-font-mono);
 }
 
-button:hover,
-.button:hover {
-  background-color: #0056b3;
+/* Signature: monospace tabular figures for money and rates (ledger motif) */
+.ls-figure {
+  font-family: var(--ls-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
-/* Form Styling (example) */
-form div {
-  margin-bottom: 1rem;
-}
-
-form label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-
-form input[type="text"],
-form input[type="email"],
-form input[type="password"],
-form input[type="number"],
-form textarea,
-form select {
+.ls-container {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box; /* Ensures padding doesn't affect overall width */
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-inline: var(--ls-space-5);
 }
 
-form textarea {
-  min-height: 100px;
+.ls-rule {
+  border: none;
+  border-top: 1px solid var(--ls-border);
+  margin: var(--ls-space-6) 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ls-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

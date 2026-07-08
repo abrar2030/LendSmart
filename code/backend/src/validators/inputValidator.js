@@ -15,7 +15,7 @@ class InputValidator {
     // Common validation patterns
     this.patterns = {
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      phone: /^\+?[\d\s\-\(\)]+$/,
+      phone: /^\+?[\d\s\-()]+$/,
       ssn: /^\d{3}-?\d{2}-?\d{4}$/,
       walletAddress: /^0x[a-fA-F0-9]{40}$/,
       username: /^[a-zA-Z0-9_]{3,30}$/,

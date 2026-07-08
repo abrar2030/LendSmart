@@ -1,6 +1,7 @@
-import type React from 'react';
-import {StyleSheet, View, type ViewStyle} from 'react-native';
-import {Text, TextInput, useTheme} from 'react-native-paper';
+import type React from "react";
+import { StyleSheet, View, type ViewStyle } from "react-native";
+import { Text, TextInput, useTheme } from "react-native-paper";
+import type { AppTheme } from "../theme/appTheme";
 
 interface InputFieldProps {
   label: string;
@@ -11,15 +12,15 @@ interface InputFieldProps {
   error?: string;
   touched?: boolean;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   multiline?: boolean;
   numberOfLines?: number;
   icon?: string;
   rightIcon?: string;
   disabled?: boolean;
   style?: ViewStyle;
-  mode?: 'flat' | 'outlined';
+  mode?: "flat" | "outlined";
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -31,17 +32,17 @@ const InputField: React.FC<InputFieldProps> = ({
   error,
   touched,
   secureTextEntry = false,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
+  keyboardType = "default",
+  autoCapitalize = "sentences",
   multiline = false,
   numberOfLines = 1,
   icon,
   rightIcon,
   disabled = false,
   style,
-  mode = 'outlined',
+  mode = "outlined",
 }) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const hasError = touched && !!error;
 
   return (
@@ -68,8 +69,9 @@ const InputField: React.FC<InputFieldProps> = ({
         <Text
           style={[
             styles.errorText,
-            {color: theme.colors.error, fontSize: theme.fontSizes.caption},
-          ]}>
+            { color: theme.colors.error, fontSize: theme.fontSizes.caption },
+          ]}
+        >
           {error}
         </Text>
       )}
@@ -82,7 +84,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   errorText: {
     marginTop: 4,

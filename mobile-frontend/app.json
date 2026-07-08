@@ -1,4 +1,20 @@
 {
-  "name": "LendSmartMobile",
-  "displayName": "LendSmartMobile"
+  "expo": {
+    "name": "LendSmart",
+    "slug": "lendsmart-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "lendsmart",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lendsmart.mobile"
+    },
+    "android": {
+      "package": "com.lendsmart.mobile",
+      "edgeToEdgeEnabled": true
+    }
+  }
 }

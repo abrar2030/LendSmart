@@ -1,20 +1,21 @@
-import type React from 'react';
-import {StyleSheet, View} from 'react-native';
-import {Button, Text, useTheme} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import type React from "react";
+import { StyleSheet, View } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
+import type { AppTheme } from "../theme/appTheme";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface ErrorMessageProps {
   message: string;
   onRetry?: () => void;
-  icon?: string;
+  icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 }
 
 const ErrorMessage: React.FC<ErrorMessageProps> = ({
   message,
   onRetry,
-  icon = 'alert-circle-outline',
+  icon = "alert-circle-outline",
 }) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   return (
     <View style={styles.container}>
@@ -31,15 +32,17 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({
             marginTop: theme.spacing.md,
             fontFamily: theme.fonts.primaryMedium,
           },
-        ]}>
+        ]}
+      >
         {message}
       </Text>
       {onRetry && (
         <Button
           mode="contained"
           onPress={onRetry}
-          style={{marginTop: theme.spacing.lg}}
-          icon="refresh">
+          style={{ marginTop: theme.spacing.lg }}
+          icon="refresh"
+        >
           Try Again
         </Button>
       )}
@@ -50,13 +53,13 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   message: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
 

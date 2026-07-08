@@ -1,56 +1,36 @@
 import CssBaseline from "@mui/material/CssBaseline";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import {
-  Navigate,
-  Route,
-  BrowserRouter as Router,
-  Routes,
-} from "react-router-dom";
-// Layout Components
+import { ThemeProvider } from "@mui/material/styles";
+import { Navigate, Route, Routes } from "react-router-dom";
+
 import Layout from "./components/layout/Layout";
 import PrivateRoute from "./components/routing/PrivateRoute";
 import { ApiProvider } from "./contexts/ApiContext";
-// Context Providers
 import { AuthProvider } from "./contexts/AuthContext";
 import { BlockchainProvider } from "./contexts/BlockchainContext";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
-import ApplyForLoan from "./pages/ApplyForLoan";
-import Dashboard from "./pages/Dashboard";
+import theme from "./theme/muiTheme";
+
 // Pages
 import HomePage from "./pages/HomePage";
-import KycVerificationPage from "./pages/KycVerificationPage";
-// New Pages
-import LoanApplicationPage from "./pages/LoanApplicationPage";
-import LoanDetails from "./pages/LoanDetails";
-import LoanMarketplace from "./pages/LoanMarketplace";
 import Login from "./pages/Login";
-import MyLoans from "./pages/MyLoans";
-import NotFoundPage from "./pages/NotFoundPage";
-import Profile from "./pages/Profile";
-import ProfilePage from "./pages/ProfilePage";
 import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import LoanMarketplace from "./pages/LoanMarketplace";
+import LoanDetails from "./pages/LoanDetails";
+import ApplyForLoan from "./pages/ApplyForLoan";
+import LoanApplicationPage from "./pages/LoanApplicationPage";
+import MyLoans from "./pages/MyLoans";
 import RiskAssessment from "./pages/RiskAssessment";
-import SettingsPage from "./pages/SettingsPage";
-import TransactionsHistoryPage from "./pages/TransactionsHistoryPage";
+import ProfilePage from "./pages/ProfilePage";
 import WalletConnectionPage from "./pages/WalletConnectionPage";
+import TransactionsHistoryPage from "./pages/TransactionsHistoryPage";
+import SettingsPage from "./pages/SettingsPage";
+import KycVerificationPage from "./pages/KycVerificationPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
-// Create theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#1976d2",
-    },
-    secondary: {
-      main: "#f50057",
-    },
-    background: {
-      default: "#f5f5f5",
-    },
-  },
-  typography: {
-    fontFamily: ["Roboto", "Arial", "sans-serif"].join(","),
-  },
-});
+function protectedRoute(element) {
+  return <PrivateRoute>{element}</PrivateRoute>;
+}
 
 function App() {
   return (
@@ -59,120 +39,63 @@ function App() {
       <AuthProvider>
         <BlockchainProvider>
           <ApiProvider>
-            <Router>
-              <Layout>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/marketplace" element={<LoanMarketplace />} />
-                  <Route path="/loans/:id" element={<LoanDetails />} />
+            <Layout>
+              <Routes>
+                {/* Public: the app opens on the homepage */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/marketplace" element={<LoanMarketplace />} />
+                <Route path="/loans/:id" element={<LoanDetails />} />
 
-                  {/* Protected Routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <PrivateRoute>
-                        <Dashboard />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <PrivateRoute>
-                        <Profile />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile-page"
-                    element={
-                      <PrivateRoute>
-                        <ProfilePage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/apply"
-                    element={
-                      <PrivateRoute>
-                        <ApplyForLoan />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/loans/apply"
-                    element={
-                      <PrivateRoute>
-                        <LoanApplicationPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-loans"
-                    element={
-                      <PrivateRoute>
-                        <MyLoans />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/risk-assessment"
-                    element={
-                      <PrivateRoute>
-                        <RiskAssessment />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/wallet"
-                    element={
-                      <PrivateRoute>
-                        <WalletConnectionPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/transactions"
-                    element={
-                      <PrivateRoute>
-                        <TransactionsHistoryPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <PrivateRoute>
-                        <SettingsPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/kyc-verification"
-                    element={
-                      <PrivateRoute>
-                        <KycVerificationPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin"
-                    element={
-                      <PrivateRoute>
-                        <AdminDashboardPage />
-                      </PrivateRoute>
-                    }
-                  />
+                {/* Protected */}
+                <Route
+                  path="/dashboard"
+                  element={protectedRoute(<Dashboard />)}
+                />
+                <Route
+                  path="/profile"
+                  element={protectedRoute(<ProfilePage />)}
+                />
+                <Route
+                  path="/apply"
+                  element={protectedRoute(<ApplyForLoan />)}
+                />
+                <Route
+                  path="/loans/apply"
+                  element={protectedRoute(<LoanApplicationPage />)}
+                />
+                <Route path="/my-loans" element={protectedRoute(<MyLoans />)} />
+                <Route
+                  path="/risk-assessment"
+                  element={protectedRoute(<RiskAssessment />)}
+                />
+                <Route
+                  path="/wallet"
+                  element={protectedRoute(<WalletConnectionPage />)}
+                />
+                <Route
+                  path="/transactions"
+                  element={protectedRoute(<TransactionsHistoryPage />)}
+                />
+                <Route
+                  path="/settings"
+                  element={protectedRoute(<SettingsPage />)}
+                />
+                <Route
+                  path="/kyc-verification"
+                  element={protectedRoute(<KycVerificationPage />)}
+                />
+                <Route
+                  path="/admin"
+                  element={protectedRoute(<AdminDashboardPage />)}
+                />
 
-                  {/* Error Pages */}
-                  <Route path="/404" element={<NotFoundPage />} />
-                  <Route path="*" element={<Navigate to="/404" replace />} />
-                </Routes>
-              </Layout>
-            </Router>
+                {/* Errors */}
+                <Route path="/404" element={<NotFoundPage />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </Layout>
           </ApiProvider>
         </BlockchainProvider>
       </AuthProvider>

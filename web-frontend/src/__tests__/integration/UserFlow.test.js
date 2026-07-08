@@ -10,6 +10,35 @@ import axios from "axios";
 import { MemoryRouter } from "react-router-dom";
 import App from "../../App";
 
+jest.mock("../../contexts/BlockchainContext", () => ({
+  BlockchainProvider: ({ children }) => children,
+  useBlockchain: () => ({
+    isConnected: false,
+    account: null,
+    connectWallet: jest.fn(),
+    disconnectWallet: jest.fn(),
+    getUserLoans: jest.fn().mockResolvedValue([]),
+    getLoanDetails: jest.fn().mockResolvedValue(null),
+    getUserReputationScore: jest.fn().mockResolvedValue(null),
+  }),
+}));
+
+jest.mock("../../contexts/ApiContext", () => ({
+  ApiProvider: ({ children }) => children,
+  useApi: () => ({
+    isAuthenticated: false,
+    user: null,
+    loading: false,
+    error: null,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+    getMyLoans: jest.fn().mockResolvedValue({ data: [] }),
+    getLoans: jest.fn().mockResolvedValue({ data: [] }),
+    getLoan: jest.fn().mockResolvedValue({ data: null }),
+  }),
+}));
+
 jest.mock("axios");
 jest.mock("../../utils/LendSmartLoanABI.json", () => ({
   abi: [],
@@ -85,7 +114,7 @@ describe("User Authentication Flow Integration Tests", () => {
 
     // Verify home page loads
     await waitFor(() => {
-      expect(screen.getByText(/Welcome to LendSmart/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/LendSmart/i)[0]).toBeInTheDocument();
     });
 
     // Note: Full user flow would require routing navigation

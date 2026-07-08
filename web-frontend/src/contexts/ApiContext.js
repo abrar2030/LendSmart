@@ -20,7 +20,7 @@ export const ApiProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // API base URL - should be environment variable in production
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001/api";
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   // Load user data
   const loadUser = useCallback(async () => {
@@ -65,10 +65,7 @@ export const ApiProvider = ({ children }) => {
 
       const res = await axios.post(`${API_URL}/auth/register`, userData);
 
-      setToken(res.data.token);
-      localStorage.setItem("token", res.data.token);
-      setUser(res.data.user);
-      setIsAuthenticated(true);
+      // Registration requires email verification; no token is issued yet.
       setLoading(false);
 
       return res.data;
@@ -91,9 +88,10 @@ export const ApiProvider = ({ children }) => {
         password,
       });
 
-      setToken(res.data.token);
-      localStorage.setItem("token", res.data.token);
-      setUser(res.data.user);
+      const { user: loggedInUser, accessToken } = res.data.data;
+      setToken(accessToken);
+      localStorage.setItem("token", accessToken);
+      setUser(loggedInUser);
       setIsAuthenticated(true);
       setLoading(false);
 

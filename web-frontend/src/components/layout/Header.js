@@ -25,33 +25,17 @@ const Header = () => {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
 
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
-  };
-
-  const handleOpenUserMenu = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
-  };
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
-
+  const handleOpenNavMenu = (e) => setAnchorElNav(e.currentTarget);
+  const handleOpenUserMenu = (e) => setAnchorElUser(e.currentTarget);
+  const handleCloseNavMenu = () => setAnchorElNav(null);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
   const handleLogout = () => {
     logout();
     handleCloseUserMenu();
   };
-
   const handleWalletConnect = () => {
-    if (isConnected) {
-      disconnectWallet();
-    } else {
-      connectWallet();
-    }
+    if (isConnected) disconnectWallet();
+    else connectWallet();
   };
 
   const pages = [
@@ -72,30 +56,45 @@ const Header = () => {
     { title: "Profile", path: "/profile" },
   ];
 
-  return (
-    <AppBar position="static">
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          {/* Desktop Logo */}
-          <Typography
-            variant="h6"
-            noWrap
-            component={RouterLink}
-            to="/"
-            sx={{
-              mr: 2,
-              display: { xs: "none", md: "flex" },
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".3rem",
-              color: "inherit",
-              textDecoration: "none",
-            }}
-          >
-            LENDSMART
-          </Typography>
+  const canSee = (page) => {
+    if (page.auth && !isAuthenticated) return false;
+    if (page.role && (!user || user.role !== page.role)) return false;
+    return true;
+  };
 
-          {/* Mobile Menu */}
+  const wordmark = (display) => (
+    <Typography
+      noWrap
+      component={RouterLink}
+      to="/"
+      sx={{
+        display,
+        fontFamily: "var(--ls-font-display)",
+        fontWeight: 700,
+        fontSize: "1.25rem",
+        letterSpacing: "-0.02em",
+        color: "var(--ls-ink)",
+        textDecoration: "none",
+      }}
+    >
+      LendSmart
+    </Typography>
+  );
+
+  return (
+    <AppBar
+      position="sticky"
+      sx={{
+        bgcolor: "var(--ls-surface)",
+        color: "var(--ls-ink)",
+        borderBottom: "1px solid var(--ls-border)",
+      }}
+    >
+      <Container maxWidth="xl">
+        <Toolbar disableGutters sx={{ gap: 1 }}>
+          {wordmark({ xs: "none", md: "flex" })}
+
+          {/* Mobile menu */}
           <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
             <IconButton
               size="large"
@@ -103,117 +102,86 @@ const Header = () => {
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleOpenNavMenu}
-              color="inherit"
+              sx={{ color: "var(--ls-ink)" }}
             >
               <MenuIcon />
             </IconButton>
             <Menu
               id="menu-appbar"
               anchorEl={anchorElNav}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "left",
-              }}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
               keepMounted
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "left",
-              }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
               open={Boolean(anchorElNav)}
               onClose={handleCloseNavMenu}
-              sx={{
-                display: { xs: "block", md: "none" },
-              }}
+              sx={{ display: { xs: "block", md: "none" } }}
             >
-              {pages.map((page) => {
-                // Skip if page requires auth and user is not authenticated
-                if (page.auth && !isAuthenticated) return null;
-                // Skip if page requires specific role and user doesn't have it
-                if (page.role && (!user || user.role !== page.role))
-                  return null;
-
-                return (
-                  <MenuItem
-                    key={page.title}
-                    onClick={handleCloseNavMenu}
-                    component={RouterLink}
-                    to={page.path}
-                  >
-                    <Typography textAlign="center">{page.title}</Typography>
-                  </MenuItem>
-                );
-              })}
+              {pages.filter(canSee).map((page) => (
+                <MenuItem
+                  key={page.title}
+                  onClick={handleCloseNavMenu}
+                  component={RouterLink}
+                  to={page.path}
+                >
+                  <Typography textAlign="center">{page.title}</Typography>
+                </MenuItem>
+              ))}
             </Menu>
           </Box>
 
-          {/* Mobile Logo */}
-          <Typography
-            variant="h5"
-            noWrap
-            component={RouterLink}
-            to="/"
+          {wordmark({ xs: "flex", md: "none" })}
+
+          {/* Desktop nav */}
+          <Box
             sx={{
-              mr: 2,
-              display: { xs: "flex", md: "none" },
               flexGrow: 1,
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".3rem",
-              color: "inherit",
-              textDecoration: "none",
+              display: { xs: "none", md: "flex" },
+              ml: 3,
+              gap: 0.5,
             }}
           >
-            LENDSMART
-          </Typography>
-
-          {/* Desktop Menu */}
-          <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
-            {pages.map((page) => {
-              // Skip if page requires auth and user is not authenticated
-              if (page.auth && !isAuthenticated) return null;
-              // Skip if page requires specific role and user doesn't have it
-              if (page.role && (!user || user.role !== page.role)) return null;
-
-              return (
-                <Button
-                  key={page.title}
-                  component={RouterLink}
-                  to={page.path}
-                  onClick={handleCloseNavMenu}
-                  sx={{ my: 2, color: "white", display: "block" }}
-                >
-                  {page.title}
-                </Button>
-              );
-            })}
+            {pages.filter(canSee).map((page) => (
+              <Button
+                key={page.title}
+                component={RouterLink}
+                to={page.path}
+                onClick={handleCloseNavMenu}
+                sx={{
+                  color: "var(--ls-text-muted)",
+                  fontWeight: 500,
+                  "&:hover": { color: "var(--ls-ink)", bgcolor: "transparent" },
+                }}
+              >
+                {page.title}
+              </Button>
+            ))}
           </Box>
 
-          {/* Wallet Connection Button */}
-          <Box sx={{ mr: 2 }}>
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={handleWalletConnect}
-              sx={{
-                borderColor: "white",
-                "&:hover": {
-                  borderColor: "white",
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                },
-              }}
-            >
-              {isConnected
-                ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}`
-                : "Connect Wallet"}
-            </Button>
-          </Box>
+          {/* Wallet */}
+          <Button
+            variant="outlined"
+            onClick={handleWalletConnect}
+            className={isConnected ? "ls-figure" : undefined}
+            sx={{
+              mr: 1,
+              borderColor: "var(--ls-border-strong)",
+              color: "var(--ls-ink)",
+            }}
+          >
+            {isConnected
+              ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}`
+              : "Connect Wallet"}
+          </Button>
 
-          {/* User Menu */}
+          {/* User area */}
           <Box sx={{ flexGrow: 0 }}>
             {isAuthenticated ? (
               <>
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt={user?.name || "User"}>
+                  <Avatar
+                    sx={{ bgcolor: "var(--ls-primary)" }}
+                    alt={user?.name || "User"}
+                  >
                     {user?.name ? (
                       user.name.charAt(0).toUpperCase()
                     ) : (
@@ -223,17 +191,10 @@ const Header = () => {
                 </IconButton>
                 <Menu
                   sx={{ mt: "45px" }}
-                  id="menu-appbar"
                   anchorEl={anchorElUser}
-                  anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
                   keepMounted
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
                   open={Boolean(anchorElUser)}
                   onClose={handleCloseUserMenu}
                 >
@@ -255,27 +216,18 @@ const Header = () => {
                 </Menu>
               </>
             ) : (
-              <Box sx={{ display: "flex" }}>
+              <Box sx={{ display: "flex", gap: 1 }}>
                 <Button
-                  color="inherit"
                   component={RouterLink}
                   to="/login"
-                  sx={{ mr: 1 }}
+                  sx={{ color: "var(--ls-ink)" }}
                 >
                   Login
                 </Button>
                 <Button
-                  variant="outlined"
-                  color="inherit"
+                  variant="contained"
                   component={RouterLink}
                   to="/register"
-                  sx={{
-                    borderColor: "white",
-                    "&:hover": {
-                      borderColor: "white",
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                    },
-                  }}
                 >
                   Register
                 </Button>

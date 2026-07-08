@@ -25,55 +25,31 @@ variable "security_group_ids" {
 }
 
 variable "db_instance_class" {
-  description = "The instance type of the RDS database"
+  description = "The instance class for the DocumentDB cluster instances"
   type        = string
-  default     = "db.t3.micro"
+  default     = "db.t3.medium"
 }
 
 variable "db_name" {
-  description = "The name of the database"
+  description = "The application database name (created on first write in DocumentDB)"
   type        = string
   default     = "lendsmartdb"
 }
 
 variable "db_username" {
-  description = "The master username for the database"
+  description = "The master username for the DocumentDB cluster"
   type        = string
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "The master password for the database"
+  description = "The master password for the DocumentDB cluster"
   type        = string
   sensitive   = true
 }
 
-variable "db_allocated_storage" {
-  description = "The allocated storage in GBs"
-  type        = number
-  default     = 20
-}
-
-variable "db_engine" {
-  description = "The database engine to use"
-  type        = string
-  default     = "mysql"
-}
-
-variable "db_engine_version" {
-  description = "The database engine version"
-  type        = string
-  default     = "8.0.35"
-}
-
-variable "db_parameter_group_name" {
-  description = "The name of the DB parameter group to associate"
-  type        = string
-  default     = "default.mysql8.0"
-}
-
 variable "db_skip_final_snapshot" {
-  description = "Determines whether a final DB snapshot is created before deletion"
+  description = "Determines whether a final snapshot is created before deletion"
   type        = bool
   default     = false
 }
@@ -103,55 +79,13 @@ variable "db_maintenance_window" {
 }
 
 variable "db_multi_az" {
-  description = "A boolean indicating whether the DB instance is Multi-AZ"
+  description = "When true, provisions two cluster instances across AZs"
   type        = bool
   default     = false
 }
 
 variable "db_deletion_protection" {
-  description = "Whether deletion protection is enabled for the DB instance"
+  description = "Whether deletion protection is enabled for the cluster"
   type        = bool
   default     = true
-}
-
-variable "db_performance_insights_enabled" {
-  description = "Specifies whether Performance Insights is enabled"
-  type        = bool
-  default     = false
-}
-
-variable "db_performance_insights_retention_period" {
-  description = "Amount of time in days to retain Performance Insights data (7 or 731)"
-  type        = number
-  default     = 7
-}
-
-variable "db_performance_insights_kms_key_id" {
-  description = "KMS key identifier for encryption of Performance Insights data"
-  type        = string
-  default     = null
-}
-
-variable "enable_aurora" {
-  description = "Whether to create an Aurora cluster in addition to the RDS instance"
-  type        = bool
-  default     = false
-}
-
-variable "aurora_availability_zones" {
-  description = "List of EC2 AZs for Aurora cluster instances"
-  type        = list(string)
-  default     = []
-}
-
-variable "aurora_instance_count" {
-  description = "Number of Aurora instances to create"
-  type        = number
-  default     = 1
-}
-
-variable "aurora_instance_class" {
-  description = "Instance class of Aurora instances"
-  type        = string
-  default     = "db.t3.medium"
 }

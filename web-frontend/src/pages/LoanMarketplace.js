@@ -18,7 +18,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../contexts/ApiContext";
 import { useBlockchain } from "../contexts/BlockchainContext";
@@ -38,11 +38,7 @@ const LoanMarketplace = () => {
     maxAmount: "",
   });
 
-  useEffect(() => {
-    fetchLoans();
-  }, [fetchLoans]);
-
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,7 +53,11 @@ const LoanMarketplace = () => {
       setError("Failed to fetch available loans");
       setLoading(false);
     }
-  };
+  }, [getLoans]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);

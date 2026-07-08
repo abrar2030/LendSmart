@@ -353,7 +353,7 @@ userSchema.virtual("isKYCVerified").get(function () {
 userSchema.pre("save", async function (next) {
   // Validate phone number before encryption
   if (this.isModified("phoneNumber") && this.phoneNumber) {
-    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
+    const phoneRegex = /^\+?[\d\s\-()]+$/;
     if (!phoneRegex.test(this.phoneNumber)) {
       return next(new Error("Please enter a valid phone number"));
     }

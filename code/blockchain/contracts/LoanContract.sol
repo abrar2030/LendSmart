@@ -308,7 +308,6 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
 
         if (loan.amountRepaid > loan.principal) {
             // If repayment starts covering interest
-            uint256 totalInterestPaidSoFar = loan.amountRepaid - loan.principal;
             uint256 totalInterestDue = loan.repaymentAmount - loan.principal;
             uint256 interestPaidThisTime = amountToRepayThisTime;
             if (loan.amountRepaid - amountToRepayThisTime < loan.principal) {

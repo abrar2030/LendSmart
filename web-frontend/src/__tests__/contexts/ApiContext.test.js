@@ -25,10 +25,11 @@ describe("ApiContext", () => {
 
     axios.post.mockResolvedValueOnce({
       data: {
-        user: mockUser,
-        token: mockToken,
+        success: true,
+        data: { user: mockUser, accessToken: mockToken },
       },
     });
+    axios.get.mockResolvedValue({ data: { data: mockUser } });
 
     const wrapper = ({ children }) => <ApiProvider>{children}</ApiProvider>;
     const { result } = renderHook(() => useApi(), { wrapper });
@@ -48,25 +49,27 @@ describe("ApiContext", () => {
 
     axios.post.mockResolvedValueOnce({
       data: {
-        user: mockUser,
-        token: mockToken,
+        success: true,
+        message: "User registered successfully. Please verify your email.",
+        data: mockUser,
       },
     });
 
     const wrapper = ({ children }) => <ApiProvider>{children}</ApiProvider>;
     const { result } = renderHook(() => useApi(), { wrapper });
 
+    let response;
     await act(async () => {
-      await result.current.register({
+      response = await result.current.register({
         name: "Test User",
         email: "test@test.com",
         password: "password",
       });
     });
 
-    await waitFor(() => {
-      expect(result.current.isAuthenticated).toBe(true);
-    });
+    // Registration requires email verification; the user is not authenticated yet.
+    expect(response.success).toBe(true);
+    expect(result.current.isAuthenticated).toBe(false);
   });
 
   test("should handle logout", async () => {

@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Project root directory (assuming script is run from project root)
 PROJECT_ROOT=$(pwd)
-ML_DIR="$PROJECT_ROOT/ml-model"
+ML_DIR="$PROJECT_ROOT/code/ml_services"
 DATA_DIR="$ML_DIR/data"
 MODELS_DIR="$ML_DIR/models"
 LOGS_DIR="$ML_DIR/logs"

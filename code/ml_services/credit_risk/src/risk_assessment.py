@@ -231,7 +231,7 @@ class LoanRiskModel:
             "borrower_previous_defaults": np.random.poisson(0.5, n_samples),
         }
         X = pd.DataFrame(data)
-        X["collateral_value"] = 0
+        X["collateral_value"] = 0.0
         mask = X["is_collateralized"] == 1
         X.loc[mask, "collateral_value"] = X.loc[
             mask, "loan_amount"

@@ -45,16 +45,15 @@ frontend:
 database:
   replicas: 3
   image:
-    repository: mysql
-    tag: 8.0
+    repository: mongo
+    tag: "7"
     pullPolicy: IfNotPresent
-  containerPort: 3306
-  servicePort: 3306
+  containerPort: 27017
+  servicePort: 27017
   name: lendsmartdb
-  user: appuser
-  password: prod-password
+  rootUsername: root
   rootPassword: prod-root-password
-  url: mysql://appuser:prod-password@app-database:3306/appdb
+  uri: mongodb://root:prod-root-password@app-database:27017/appdb?authSource=admin
   storageClass: premium-rwo
   storage: 50Gi
   resources:

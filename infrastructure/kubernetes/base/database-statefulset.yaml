@@ -21,11 +21,11 @@ spec:
       securityContext:
         fsGroup: 999
       containers:
-        - name: mysql
-          image: mysql:8.0
+        - name: mongodb
+          image: mongo:7
           ports:
-            - name: mysql
-              containerPort: 3306
+            - name: mongodb
+              containerPort: 27017
               protocol: TCP
           resources:
             limits:
@@ -35,39 +35,31 @@ spec:
               cpu: 500m
               memory: 512Mi
           env:
-            - name: MYSQL_ROOT_PASSWORD
+            - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: MYSQL_ROOT_PASSWORD
-            - name: MYSQL_DATABASE
+                  key: MONGO_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: MYSQL_DATABASE
-            - name: MYSQL_USER
+                  key: MONGO_ROOT_PASSWORD
+            - name: MONGO_INITDB_DATABASE
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: MYSQL_USER
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MYSQL_PASSWORD
+                  key: MONGO_DATABASE
           volumeMounts:
-            - name: mysql-data
-              mountPath: /var/lib/mysql
+            - name: mongo-data
+              mountPath: /data/db
           livenessProbe:
             exec:
               command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-                - -u
-                - root
-                - -p$(MYSQL_ROOT_PASSWORD)
+                - mongosh
+                - --quiet
+                - --eval
+                - db.adminCommand('ping')
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -75,20 +67,17 @@ spec:
           readinessProbe:
             exec:
               command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-                - -u
-                - root
-                - -p$(MYSQL_ROOT_PASSWORD)
+                - mongosh
+                - --quiet
+                - --eval
+                - db.adminCommand('ping')
             initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
-        name: mysql-data
+        name: mongo-data
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:

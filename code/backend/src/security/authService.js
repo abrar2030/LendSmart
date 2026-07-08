@@ -8,6 +8,7 @@ const User = require("../models/User");
 const { getEncryptionService } = require("../config/security/encryption");
 const { getAuditLogger } = require("../compliance/auditLogger");
 const { logger } = require("../utils/logger");
+const jwtConfig = require("../config/jwt");
 
 // Redis client with fallback for development
 let redisClient;
@@ -49,13 +50,10 @@ try {
  */
 class AuthService {
   constructor() {
-    this.jwtSecret =
-      process.env.JWT_SECRET || "default-jwt-secret-for-development";
-    this.refreshSecret =
-      process.env.REFRESH_TOKEN_SECRET ||
-      "default-refresh-secret-for-development";
-    this.jwtExpiry = process.env.JWT_EXPIRE || "15m";
-    this.refreshExpiry = process.env.REFRESH_TOKEN_EXPIRE || "7d";
+    this.jwtSecret = jwtConfig.jwtSecret;
+    this.refreshSecret = jwtConfig.refreshSecret;
+    this.jwtExpiry = jwtConfig.jwtExpiry;
+    this.refreshExpiry = jwtConfig.refreshExpiry;
     this.maxLoginAttempts = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
     this.lockoutDuration = parseInt(process.env.LOCKOUT_DURATION) || 900; // 15 minutes
     this.encryptionService = getEncryptionService();

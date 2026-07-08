@@ -465,21 +465,11 @@ class FileUploadService {
    * @returns {string} Extracted text
    */
   async extractTextFromPDF(filePath) {
-    try {
-      // Placeholder - would use pdf-parse or similar library
-      // const pdfParse = require('pdf-parse');
-      // const dataBuffer = await fs.readFile(filePath);
-      // const data = await pdfParse(dataBuffer);
-      // return data.text;
-
-      return "Text extraction not implemented";
-    } catch (error) {
-      logger.error("PDF text extraction failed", {
-        error: error.message,
-        filePath,
-      });
-      return null;
-    }
+    // Not implemented: PDF text extraction is a declared-but-unwired feature.
+    // The pdf-parse dependency is available but not yet integrated here.
+    // Returning a sentinel keeps the upload flow non-crashing until wired.
+    void filePath;
+    return "Text extraction not implemented";
   }
 
   /**

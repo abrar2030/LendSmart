@@ -13,7 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../contexts/ApiContext";
 import { useBlockchain } from "../contexts/BlockchainContext";
@@ -30,11 +30,7 @@ const MyLoans = () => {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
 
-  useEffect(() => {
-    fetchLoans();
-  }, [fetchLoans]);
-
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -62,7 +58,11 @@ const MyLoans = () => {
       setError("Failed to fetch your loans");
       setLoading(false);
     }
-  };
+  }, [getMyLoans, isConnected, account, getUserLoans, getLoanDetails]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
 
   const handleConnectWallet = async () => {
     try {

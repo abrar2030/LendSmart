@@ -34,9 +34,9 @@ fi
 echo -e "${BLUE}Building Backend Docker Image...${NC}"
 if [ -d "$BACKEND_DIR" ]; then
     (
-        cd "$BACKEND_DIR"
-        # Assuming the Dockerfile is in the backend directory
-        docker build -t lendsmart-backend:latest .
+        # Build using the canonical Dockerfile in infrastructure/docker.
+        docker build -t lendsmart-backend:latest \
+            -f "$PROJECT_ROOT/infrastructure/docker/Dockerfile.backend" "$BACKEND_DIR"
         echo -e "${GREEN}Backend image 'lendsmart-backend:latest' built successfully.${NC}"
     )
 else
@@ -47,9 +47,9 @@ fi
 echo -e "${BLUE}Building Web Frontend Docker Image...${NC}"
 if [ -d "$FRONTEND_DIR" ]; then
     (
-        cd "$FRONTEND_DIR"
-        # Assuming the Dockerfile is in the web-frontend directory
-        docker build -t lendsmart-frontend:latest .
+        # Build using the canonical Dockerfile in infrastructure/docker.
+        docker build -t lendsmart-frontend:latest \
+            -f "$PROJECT_ROOT/infrastructure/docker/Dockerfile.frontend" "$FRONTEND_DIR"
         echo -e "${GREEN}Frontend image 'lendsmart-frontend:latest' built successfully.${NC}"
     )
 else

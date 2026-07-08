@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 # Project root directory (assuming script is run from project root)
 PROJECT_ROOT=$(pwd)
-CONTRACTS_DIR="$PROJECT_ROOT/smart-contracts"
+CONTRACTS_DIR="$PROJECT_ROOT/code/blockchain"
 DEPLOYMENT_DIR="$CONTRACTS_DIR/deployments"
 LOGS_DIR="$CONTRACTS_DIR/logs"
 

@@ -16,9 +16,9 @@ infrastructure/
 ├── docker/                         # Dockerfiles & container config
 │   ├── Dockerfile.backend          # Node.js multi-stage (non-root, dumb-init)
 │   ├── Dockerfile.frontend         # React + Nginx multi-stage (non-root)
-│   ├── Dockerfile.database         # MySQL 8 with custom config
+│   ├── Dockerfile.database         # MongoDB 7 with custom config
 │   ├── nginx-frontend.conf         # Nginx SPA routing + API proxy
-│   ├── mysql-custom.cnf            # MySQL tuning
+│   ├── mongod.conf                 # MongoDB tuning
 │   └── .dockerignore
 ├── docker-compose.yml              # Local development (health-check ordering)
 ├── docker-compose.prod.yml         # Production override (resource limits, no exposed DB ports)
@@ -37,7 +37,7 @@ infrastructure/
 │   │   └── prod/terraform.tfvars
 │   └── modules/
 │       ├── compute/                # ASG, Launch Template, ALB (HTTPS), Target Group
-│       ├── database/               # RDS MySQL, optional Aurora cluster
+│       ├── database/               # Amazon DocumentDB (MongoDB-compatible) cluster
 │       ├── network/                # VPC, subnets, NAT GW, CloudFront (optional)
 │       ├── security/               # ALB SG, App SG, DB SG, IAM role + instance profile
 │       ├── storage/                # S3 bucket (encrypted, versioned, access-logged)
@@ -82,7 +82,7 @@ infrastructure/
         └── roles/
             ├── common/             # Package install, timezone, firewall
             ├── webserver/          # Nginx, TLS, security headers
-            └── database/           # MariaDB, community.mysql.* modules
+            └── database/           # MongoDB, community.mongodb.* modules
 ```
 
 ---
@@ -103,7 +103,7 @@ Services:
 |----------|------------------------|
 | Frontend | http://localhost:80 |
 | Backend | http://localhost:3000 |
-| MySQL | localhost:3306 |
+| MongoDB | localhost:27017 |
 | Redis | localhost:6379 |
 
 ### 2 · Terraform (AWS)
@@ -150,7 +150,7 @@ kubectl apply -f base/
 cd ansible
 
 # Install required collections
-ansible-galaxy collection install community.mysql community.general ansible.posix
+ansible-galaxy collection install community.mongodb community.general ansible.posix
 
 # Edit inventory/hosts.yml with your server IPs
 
@@ -177,7 +177,7 @@ Prod automatically enables: Multi-AZ RDS, deletion protection, final snapshot.
 
 ## Security Posture
 
-- **Network** — Internet traffic hits the ALB only. EC2 instances are in private subnets and accept traffic only from the ALB security group on port 3000. Databases accept only from the app security group on port 3306.
+- **Network** — Internet traffic hits the ALB only. EC2 instances are in private subnets and accept traffic only from the ALB security group on port 3000. Databases accept only from the app security group on port 27017.
 - **IAM** — EC2 instances get a least-privilege instance profile: SSM (no SSH keys required in prod), CloudWatch agent, and optional S3 read-only.
 - **Encryption** — RDS encrypted at rest (AES-256 / KMS), S3 SSE-AES256, HTTPS enforced at the ALB (TLS 1.2+) and at Nginx.
 - **Kubernetes** — Zero-trust NetworkPolicy (deny-all default, explicit per-workload rules), non-root containers, `readOnlyRootFilesystem`, dropped Linux capabilities, topology spread.
@@ -189,7 +189,7 @@ Prod automatically enables: Multi-AZ RDS, deletion protection, final snapshot.
 
 ```bash
 ansible-galaxy collection install \
-  community.mysql \
+  community.mongodb \
   community.general \
   ansible.posix \
   amazon.aws

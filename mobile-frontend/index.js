@@ -1,9 +1,7 @@
-/**
- * @format
- */
+import { registerRootComponent } from "expo";
 
-import {AppRegistry} from 'react-native';
-import App from './App';
-import {name as appName} from './app.json';
+import App from "./src/App";
 
-AppRegistry.registerComponent(appName, () => App);
+// registerRootComponent calls AppRegistry.registerComponent('main', () => App)
+// and sets up the Expo environment appropriately for both native and web.
+registerRootComponent(App);

@@ -82,12 +82,12 @@ services:
   # Backend service
   backend:
     build:
-      context: ../../backend
+      context: ../../code/backend
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
-      - ../../backend:/app
+      - ../../code/backend:/app
     environment:
       - NODE_ENV=development
     depends_on:
@@ -149,12 +149,12 @@ services:
   # ML Model service
   ml-service:
     build:
-      context: ../../ml-model
+      context: ../../code/ml_services
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ../../ml-model:/app
+      - ../../code/ml_services:/app
     depends_on:
       - database
     networks:
@@ -173,9 +173,9 @@ EOF
     fi
 
     # Check if Dockerfiles exist for each service, create if not
-    create_dockerfile "backend" "Node.js"
+    create_dockerfile "code/backend" "Node.js"
     create_dockerfile "web-frontend" "React"
-    create_dockerfile "ml-model" "Python"
+    create_dockerfile "code/ml_services" "Python"
 
     # Build all images
     echo -e "${YELLOW}Building Docker images...${NC}"

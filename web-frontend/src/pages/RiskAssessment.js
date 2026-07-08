@@ -19,12 +19,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useApi } from "../contexts/ApiContext";
 import { useBlockchain } from "../contexts/BlockchainContext";
 
 const RiskAssessment = () => {
-  const { getLoan, setRiskScore } = useApi();
+  const { setRiskScore } = useApi();
   const { setLoanRiskScore, isConnected, connectWallet } = useBlockchain();
 
   const [loans, setLoans] = useState([]);
@@ -37,11 +37,7 @@ const RiskAssessment = () => {
   const [shouldReject, setShouldReject] = useState(false);
   const [privateKey, setPrivateKey] = useState("");
 
-  useEffect(() => {
-    fetchPendingLoans();
-  }, [fetchPendingLoans]);
-
-  const fetchPendingLoans = async () => {
+  const fetchPendingLoans = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -89,7 +85,11 @@ const RiskAssessment = () => {
       setError("Failed to fetch loans pending risk assessment");
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPendingLoans();
+  }, [fetchPendingLoans]);
 
   const handleConnectWallet = async () => {
     try {

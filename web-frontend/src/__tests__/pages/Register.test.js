@@ -33,7 +33,9 @@ describe("Register Page", () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByText(/Sign up/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Sign up/i }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
@@ -70,7 +72,7 @@ describe("Register Page", () => {
         email: "test@test.com",
         password: "password123",
       });
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+      expect(mockNavigate).toHaveBeenCalledWith("/login");
     });
   });
 

@@ -31,8 +31,12 @@ fi
 # --- Deployment ---
 echo -e "${BLUE}Applying Kubernetes manifests from $K8S_MANIFESTS_DIR...${NC}"
 
-# Apply all YAML files in the manifests directory
-kubectl apply -f "$K8S_MANIFESTS_DIR"
+# Apply the manifests. kubectl apply -f on a directory is non-recursive and the
+# manifests live in subdirectories, so apply rbac and base explicitly. The
+# environments/ directory holds Helm-style values (not raw manifests) and is not
+# applied here.
+kubectl apply -f "$K8S_MANIFESTS_DIR/rbac"
+kubectl apply -f "$K8S_MANIFESTS_DIR/base"
 
 echo -e "${GREEN}Kubernetes manifests applied successfully.${NC}"
 

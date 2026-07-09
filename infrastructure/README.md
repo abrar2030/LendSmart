@@ -99,12 +99,13 @@ docker compose up --build
 ```
 
 Services:
-| Service | URL |
-|----------|------------------------|
-| Frontend | http://localhost:80 |
-| Backend | http://localhost:3000 |
-| MongoDB | localhost:27017 |
-| Redis | localhost:6379 |
+
+| Service  | URL                   |
+| -------- | --------------------- |
+| Frontend | http://localhost:80   |
+| Backend  | http://localhost:3000 |
+| MongoDB  | localhost:27017       |
+| Redis    | localhost:6379        |
 
 ### 2 · Terraform (AWS)
 

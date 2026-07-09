@@ -98,10 +98,7 @@ export interface LoanFilters {
 export interface Transaction {
   id: string;
   type:
-    | "loan_funded"
-    | "loan_repayment"
-    | "loan_application"
-    | "loan_disbursed";
+    "loan_funded" | "loan_repayment" | "loan_application" | "loan_disbursed";
   amount: number;
   loanId?: string;
   from?: string;

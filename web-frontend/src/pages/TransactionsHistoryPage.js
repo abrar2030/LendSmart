@@ -23,7 +23,7 @@ const TransactionsHistoryPage = () => {
     const fetchTransactions = async () => {
       try {
         const loans = await getMyLoans();
-        const txs = (loans.data || []).flatMap((loan) =>
+        const txs = (loans.data?.loans || []).flatMap((loan) =>
           (loan.transactions || []).map((tx) => ({ ...tx, loanId: loan.id })),
         );
         setTransactions(txs);

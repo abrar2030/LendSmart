@@ -182,6 +182,10 @@ class AuthController {
           data: {
             user: result.user,
             accessToken: result.tokens.accessToken,
+            // Also returned in the body (not just the httpOnly cookie) so
+            // native clients without a shared cookie jar (mobile) can store
+            // and use it for refresh calls.
+            refreshToken: result.tokens.refreshToken,
             expiresIn: "15m",
           },
         });
@@ -255,6 +259,7 @@ class AuthController {
           success: true,
           data: {
             accessToken: result.tokens.accessToken,
+            refreshToken: result.tokens.refreshToken,
             expiresIn: "15m",
           },
         });

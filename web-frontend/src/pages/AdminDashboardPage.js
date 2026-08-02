@@ -37,18 +37,21 @@ const AdminDashboardPage = () => {
     const fetchData = async () => {
       try {
         const loansData = await getLoans();
-        setLoans(loansData.data || []);
+        const loanList = loansData.data?.loans || [];
+        setLoans(loanList);
 
         // Calculate statistics
-        const totalLoans = loansData.data?.length || 0;
-        const activeLoans =
-          loansData.data?.filter(
-            (l) => l.status === "active" || l.status === "funded",
-          ).length || 0;
-        const totalVolume =
-          loansData.data?.reduce((sum, l) => sum + (l.amount || 0), 0) || 0;
-        const defaulted =
-          loansData.data?.filter((l) => l.status === "defaulted").length || 0;
+        const totalLoans = loanList.length;
+        const activeLoans = loanList.filter(
+          (l) => l.status === "active" || l.status === "funded",
+        ).length;
+        const totalVolume = loanList.reduce(
+          (sum, l) => sum + (l.amount || 0),
+          0,
+        );
+        const defaulted = loanList.filter(
+          (l) => l.status === "defaulted",
+        ).length;
         const defaultRate =
           totalLoans > 0 ? ((defaulted / totalLoans) * 100).toFixed(2) : 0;
 
@@ -87,7 +90,7 @@ const AdminDashboardPage = () => {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -98,7 +101,7 @@ const AdminDashboardPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -109,7 +112,7 @@ const AdminDashboardPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -122,7 +125,7 @@ const AdminDashboardPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>

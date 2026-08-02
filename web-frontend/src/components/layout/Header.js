@@ -180,10 +180,10 @@ const Header = () => {
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                   <Avatar
                     sx={{ bgcolor: "var(--ls-primary)" }}
-                    alt={user?.name || "User"}
+                    alt={user?.firstName || user?.username || "User"}
                   >
-                    {user?.name ? (
-                      user.name.charAt(0).toUpperCase()
+                    {user?.firstName || user?.username ? (
+                      (user.firstName || user.username).charAt(0).toUpperCase()
                     ) : (
                       <AccountCircleIcon />
                     )}

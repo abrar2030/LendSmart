@@ -79,7 +79,7 @@ const SettingsPage = () => {
         )}
         <form onSubmit={handlePasswordSubmit}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -90,7 +90,7 @@ const SettingsPage = () => {
                 onChange={handlePasswordChange}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -101,7 +101,7 @@ const SettingsPage = () => {
                 onChange={handlePasswordChange}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -112,7 +112,7 @@ const SettingsPage = () => {
                 onChange={handlePasswordChange}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Button type="submit" variant="contained" disabled={loading}>
                 {loading ? <CircularProgress size={24} /> : "Update Password"}
               </Button>

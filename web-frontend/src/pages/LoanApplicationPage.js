@@ -260,7 +260,7 @@ const LoanApplicationPage = () => {
       case 0:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -277,7 +277,7 @@ const LoanApplicationPage = () => {
                 helperText="Enter the amount you wish to borrow"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -290,7 +290,7 @@ const LoanApplicationPage = () => {
                 helperText="Describe how you will use the loan (minimum 10 characters)"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth required>
                 <InputLabel>Loan Duration</InputLabel>
                 <Select
@@ -308,7 +308,7 @@ const LoanApplicationPage = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Desired Interest Rate (%)"
@@ -324,7 +324,7 @@ const LoanApplicationPage = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <FormControl component="fieldset">
                 <FormLabel component="legend">Collateralized Loan</FormLabel>
                 <RadioGroup
@@ -348,7 +348,7 @@ const LoanApplicationPage = () => {
             </Grid>
             {formData.isCollateralized === "true" && (
               <>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     required
                     fullWidth
@@ -359,7 +359,7 @@ const LoanApplicationPage = () => {
                     onChange={handleChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     required
                     fullWidth
@@ -377,7 +377,7 @@ const LoanApplicationPage = () => {
       case 1:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -387,7 +387,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -398,7 +398,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -408,7 +408,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 required
                 fullWidth
@@ -418,7 +418,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -428,7 +428,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -438,7 +438,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -448,7 +448,7 @@ const LoanApplicationPage = () => {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -463,7 +463,7 @@ const LoanApplicationPage = () => {
       case 2:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 required
                 fullWidth
@@ -479,7 +479,7 @@ const LoanApplicationPage = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth required>
                 <InputLabel>Employment Status</InputLabel>
                 <Select
@@ -498,7 +498,7 @@ const LoanApplicationPage = () => {
             </Grid>
             {(formData.employmentStatus === "employed" ||
               formData.employmentStatus === "self-employed") && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   required
                   fullWidth
@@ -509,7 +509,7 @@ const LoanApplicationPage = () => {
                 />
               </Grid>
             )}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Credit Score (if known)"
@@ -529,7 +529,7 @@ const LoanApplicationPage = () => {
               Review Your Application
             </Typography>
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle1" fontWeight="bold">
                   Loan Details
                 </Typography>
@@ -545,7 +545,7 @@ const LoanApplicationPage = () => {
                   </Typography>
                 )}
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"
@@ -562,7 +562,7 @@ const LoanApplicationPage = () => {
                   {formData.zipCode}, {formData.country}
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"

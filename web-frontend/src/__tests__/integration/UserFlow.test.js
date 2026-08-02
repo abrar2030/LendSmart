@@ -95,7 +95,7 @@ describe("User Authentication Flow Integration Tests", () => {
           },
         });
       }
-      if (url.includes("/loans/user/my-loans")) {
+      if (url.includes("/loans/my-loans")) {
         return Promise.resolve({
           data: {
             data: [],

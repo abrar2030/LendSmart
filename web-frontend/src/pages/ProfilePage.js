@@ -29,10 +29,10 @@ const ProfilePage = () => {
     useBlockchain();
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    street: "",
     city: "",
     state: "",
     zipCode: "",
@@ -47,14 +47,14 @@ const ProfilePage = () => {
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        address: user.address || "",
-        city: user.city || "",
-        state: user.state || "",
-        zipCode: user.zipCode || "",
-        country: user.country || "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phoneNumber: user.phoneNumber || "",
+        street: user.address?.street || "",
+        city: user.address?.city || "",
+        state: user.address?.state || "",
+        zipCode: user.address?.zipCode || "",
+        country: user.address?.country || "",
       });
     }
   }, [user]);
@@ -89,7 +89,18 @@ const ProfilePage = () => {
     setSuccess(false);
 
     try {
-      await updateProfile(formData);
+      await updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        address: {
+          street: formData.street,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          country: formData.country,
+        },
+      });
       setSuccess(true);
       setIsEditing(false);
     } catch (err) {
@@ -105,14 +116,14 @@ const ProfilePage = () => {
   const handleCancel = () => {
     if (user) {
       setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        address: user.address || "",
-        city: user.city || "",
-        state: user.state || "",
-        zipCode: user.zipCode || "",
-        country: user.country || "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phoneNumber: user.phoneNumber || "",
+        street: user.address?.street || "",
+        city: user.address?.city || "",
+        state: user.address?.state || "",
+        zipCode: user.address?.zipCode || "",
+        country: user.address?.country || "",
       });
     }
     setIsEditing(false);
@@ -127,7 +138,7 @@ const ProfilePage = () => {
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent sx={{ textAlign: "center" }}>
               <Avatar
@@ -142,7 +153,9 @@ const ProfilePage = () => {
                 <PersonIcon sx={{ fontSize: 80 }} />
               </Avatar>
               <Typography variant="h5" gutterBottom>
-                {user?.name || "User"}
+                {user?.firstName || user?.lastName
+                  ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+                  : user?.username || "User"}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 {user?.email}
@@ -204,7 +217,7 @@ const ProfilePage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Box
               sx={{
@@ -236,50 +249,59 @@ const ProfilePage = () => {
 
             <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     required
                     fullWidth
-                    label="Full Name"
-                    name="name"
-                    value={formData.name}
+                    label="First Name"
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     required
+                    fullWidth
+                    label="Last Name"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
                     fullWidth
                     label="Email Address"
-                    name="email"
                     type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={!isEditing}
+                    value={user?.email || ""}
+                    disabled
+                    helperText="Email can't be changed here"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Phone Number"
-                    name="phone"
-                    value={formData.phone}
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Street Address"
-                    name="address"
-                    value={formData.address}
+                    name="street"
+                    value={formData.street}
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="City"
@@ -289,7 +311,7 @@ const ProfilePage = () => {
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="State/Province"
@@ -299,7 +321,7 @@ const ProfilePage = () => {
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="ZIP/Postal Code"
@@ -309,7 +331,7 @@ const ProfilePage = () => {
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Country"

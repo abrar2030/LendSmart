@@ -7,9 +7,9 @@ import { Platform } from "react-native";
 // For iOS simulator, localhost is localhost
 // For production, use your actual deployed backend URL
 const API_BASE_URL_IOS =
-  process.env.MOBILE_API_BASE_URL_IOS || "http://localhost:5000/api";
+  process.env.MOBILE_API_BASE_URL_IOS || "http://localhost:3000/api";
 const API_BASE_URL_ANDROID =
-  process.env.MOBILE_API_BASE_URL_ANDROID || "http://10.0.2.2:5000/api";
+  process.env.MOBILE_API_BASE_URL_ANDROID || "http://10.0.2.2:3000/api";
 
 const API_BASE_URL =
   Platform.OS === "ios" ? API_BASE_URL_IOS : API_BASE_URL_ANDROID;

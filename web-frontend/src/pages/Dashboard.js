@@ -12,7 +12,7 @@ import {
   Divider,
   Grid,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Paper,
@@ -47,7 +47,7 @@ const Dashboard = () => {
 
       // Get user loans from backend
       const backendResult = await getMyLoans();
-      setLoans(backendResult.data || []);
+      setLoans(backendResult.data?.loans || []);
 
       // Get user loans from blockchain if connected
       if (isConnected && account) {
@@ -87,7 +87,7 @@ const Dashboard = () => {
 
       {isConnected ? (
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="body2" color="text.secondary">
               Connected Address
             </Typography>
@@ -96,7 +96,7 @@ const Dashboard = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Reputation Score
             </Typography>
@@ -105,7 +105,7 @@ const Dashboard = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Blockchain Loans
             </Typography>
@@ -134,16 +134,18 @@ const Dashboard = () => {
       </Typography>
 
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Typography variant="body2" color="text.secondary">
             Name
           </Typography>
           <Typography variant="body1" fontWeight="medium">
-            {user?.name || "N/A"}
+            {user?.firstName || user?.lastName
+              ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+              : user?.username || "N/A"}
           </Typography>
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Typography variant="body2" color="text.secondary">
             Email
           </Typography>
@@ -152,7 +154,7 @@ const Dashboard = () => {
           </Typography>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Typography variant="body2" color="text.secondary">
             Member Since
           </Typography>
@@ -181,7 +183,7 @@ const Dashboard = () => {
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card
             sx={{ bgcolor: "primary.light", color: "primary.contrastText" }}
           >
@@ -194,7 +196,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card sx={{ bgcolor: "info.light", color: "info.contrastText" }}>
             <CardContent>
               <Typography variant="h5" component="div">
@@ -205,7 +207,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card
             sx={{ bgcolor: "success.light", color: "success.contrastText" }}
           >
@@ -236,40 +238,40 @@ const Dashboard = () => {
       </Typography>
 
       <List>
-        <ListItem button onClick={() => navigate("/apply")}>
+        <ListItemButton onClick={() => navigate("/apply")}>
           <ListItemIcon>
             <AssignmentIcon />
           </ListItemIcon>
           <ListItemText primary="Apply for a New Loan" />
-        </ListItem>
+        </ListItemButton>
 
         <Divider />
 
-        <ListItem button onClick={() => navigate("/marketplace")}>
+        <ListItemButton onClick={() => navigate("/marketplace")}>
           <ListItemIcon>
             <AccountBalanceIcon />
           </ListItemIcon>
           <ListItemText primary="Browse Loan Marketplace" />
-        </ListItem>
+        </ListItemButton>
 
         <Divider />
 
-        <ListItem button onClick={() => navigate("/my-loans")}>
+        <ListItemButton onClick={() => navigate("/my-loans")}>
           <ListItemIcon>
             <TrendingUpIcon />
           </ListItemIcon>
           <ListItemText primary="Manage Your Loans" />
-        </ListItem>
+        </ListItemButton>
 
         {user?.role === "risk-assessor" && (
           <>
             <Divider />
-            <ListItem button onClick={() => navigate("/risk-assessment")}>
+            <ListItemButton onClick={() => navigate("/risk-assessment")}>
               <ListItemIcon>
                 <WarningIcon />
               </ListItemIcon>
               <ListItemText primary="Risk Assessment Dashboard" />
-            </ListItem>
+            </ListItemButton>
           </>
         )}
       </List>
@@ -297,15 +299,13 @@ const Dashboard = () => {
       )}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {renderWalletSection()}
           {renderLoanSummary()}
           {renderUserSection()}
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          {renderQuickActions()}
-        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>{renderQuickActions()}</Grid>
       </Grid>
     </Box>
   );

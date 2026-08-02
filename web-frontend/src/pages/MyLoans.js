@@ -37,7 +37,7 @@ const MyLoans = () => {
 
       // Get user loans from backend
       const backendResult = await getMyLoans();
-      setLoans(backendResult.data || []);
+      setLoans(backendResult.data?.loans || []);
 
       // Get user loans from blockchain if connected
       if (isConnected && account) {
@@ -105,7 +105,7 @@ const MyLoans = () => {
     const status = isBlockchain ? loanData.status : loan.status;
 
     return (
-      <Grid item xs={12} md={6} key={loanId}>
+      <Grid size={{ xs: 12, md: 6 }} key={loanId}>
         <Card elevation={2}>
           <CardContent>
             <Box
@@ -137,7 +137,7 @@ const MyLoans = () => {
             <Divider sx={{ my: 1.5 }} />
 
             <Grid container spacing={1}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   Principal:
                 </Typography>
@@ -148,7 +148,7 @@ const MyLoans = () => {
                   Tokens
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   Interest Rate:
                 </Typography>
@@ -156,7 +156,7 @@ const MyLoans = () => {
                   {loanData.interestRate}%
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   Duration:
                 </Typography>
@@ -164,7 +164,7 @@ const MyLoans = () => {
                   {loanData.duration} days
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   Created:
                 </Typography>

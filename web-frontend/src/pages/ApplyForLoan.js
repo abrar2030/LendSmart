@@ -127,7 +127,7 @@ const ApplyForLoan = () => {
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Token Address"
                 name="token"
@@ -139,7 +139,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Principal Amount"
                 name="principal"
@@ -156,7 +156,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Token Decimals"
                 name="decimals"
@@ -169,7 +169,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Interest Rate"
                 name="interestRate"
@@ -187,7 +187,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Duration"
                 name="duration"
@@ -205,7 +205,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Purpose"
                 name="purpose"
@@ -219,7 +219,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -234,7 +234,7 @@ const ApplyForLoan = () => {
 
             {formData.isCollateralized && (
               <>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     label="Collateral Token Address"
                     name="collateralToken"
@@ -246,7 +246,7 @@ const ApplyForLoan = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Collateral Amount"
                     name="collateralAmount"
@@ -263,7 +263,7 @@ const ApplyForLoan = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Collateral Token Decimals"
                     name="collateralDecimals"
@@ -278,7 +278,7 @@ const ApplyForLoan = () => {
               </>
             )}
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Private Key (for blockchain transaction)"
                 name="privateKey"
@@ -291,7 +291,7 @@ const ApplyForLoan = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Button
                 type="submit"
                 variant="contained"

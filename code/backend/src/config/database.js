@@ -55,7 +55,15 @@ class DatabaseManager {
 
         // Performance Settings
         // Note: bufferMaxEntries and bufferCommands are removed in newer MongoDB drivers
-        maxStalenessSeconds: parseInt(process.env.MONGO_MAX_STALENESS) || 90,
+        // maxStalenessSeconds is only valid for non-primary read preferences;
+        // the driver throws MongoInvalidArgumentError if it's combined with "primary"
+        ...(process.env.MONGO_READ_PREFERENCE &&
+        process.env.MONGO_READ_PREFERENCE !== "primary"
+          ? {
+              maxStalenessSeconds:
+                parseInt(process.env.MONGO_MAX_STALENESS) || 90,
+            }
+          : {}),
 
         // Security Settings
         authSource: process.env.MONGO_AUTH_SOURCE || "admin",

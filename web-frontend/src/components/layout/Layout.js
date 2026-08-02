@@ -1,4 +1,5 @@
 import { Box, Container } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import Footer from "./Footer";
 import Header from "./Header";
 
@@ -8,6 +9,9 @@ import Header from "./Header";
  * within this centered container.
  */
 const Layout = ({ children }) => {
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Header />
@@ -21,7 +25,7 @@ const Layout = ({ children }) => {
       >
         {children}
       </Container>
-      <Footer />
+      {isHomePage && <Footer />}
     </Box>
   );
 };

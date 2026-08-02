@@ -9,24 +9,81 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import {
+  Button,
+  Checkbox,
+  Menu,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 import * as Yup from "yup";
 import { AuthContext } from "../../../contexts/AuthContext";
 
-// Removed direct import of spacing, use theme.spacing instead
+// Mirrors the backend's employmentStatus enum (code/backend/src/models/User.js)
+const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: "full-time", label: "Full-time" },
+  { value: "part-time", label: "Part-time" },
+  { value: "contract", label: "Contract" },
+  { value: "self-employed", label: "Self-employed" },
+  { value: "unemployed", label: "Unemployed" },
+  { value: "student", label: "Student" },
+  { value: "retired", label: "Retired" },
+];
+
+const isAdult = (value) => {
+  if (!value) return false;
+  const dob = new Date(value);
+  if (Number.isNaN(dob.getTime())) return false;
+  const eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+  return dob <= eighteenYearsAgo;
+};
 
 const RegisterSchema = Yup.object().shape({
-  name: Yup.string().required("Name is required"),
+  username: Yup.string()
+    .matches(
+      /^[a-zA-Z0-9_]+$/,
+      "Only letters, numbers, and underscores allowed",
+    )
+    .min(3, "At least 3 characters")
+    .max(30, "At most 30 characters")
+    .required("Username is required"),
+  firstName: Yup.string().required("First name is required"),
+  lastName: Yup.string().required("Last name is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
+  phoneNumber: Yup.string().required("Phone number is required"),
+  dateOfBirth: Yup.string()
+    .matches(/^\d{4}-\d{2}-\d{2}$/, "Use format YYYY-MM-DD")
+    .required("Date of birth is required")
+    .test("is-adult", "You must be at least 18 years old", isAdult),
+  employmentStatus: Yup.string().required("Employment status is required"),
+  income: Yup.number()
+    .typeError("Income must be a number")
+    .min(0, "Income cannot be negative")
+    .optional(),
   password: Yup.string()
     .min(8, "Password must be at least 8 characters")
     .matches(/[a-z]/, "Password must contain at least one lowercase letter")
     .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
     .matches(/[0-9]/, "Password must contain at least one number")
+    .matches(
+      /[!@#$%^&*(),.?":{}|<>]/,
+      "Password must contain at least one special character",
+    )
     .required("Password is required"),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref("password"), null], "Passwords must match")
     .required("Confirm password is required"),
+  essentialConsent: Yup.boolean().oneOf(
+    [true],
+    "You must accept the essential data processing consent",
+  ),
+  financialConsent: Yup.boolean().oneOf(
+    [true],
+    "You must accept the financial services consent",
+  ),
+  marketingConsent: Yup.boolean(),
 });
 
 const RegisterScreen = ({ navigation }) => {
@@ -34,12 +91,33 @@ const RegisterScreen = ({ navigation }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const [serverError, setServerError] = useState(null);
+  const [employmentMenuVisible, setEmploymentMenuVisible] = useState(false);
 
   const handleRegister = async (values, { setSubmitting, resetForm }) => {
     try {
       setServerError(null);
-      // eslint-disable-next-line no-unused-vars
-      const { confirmPassword, ...userData } = values;
+      const {
+        // eslint-disable-next-line no-unused-vars
+        confirmPassword,
+        essentialConsent,
+        financialConsent,
+        marketingConsent,
+        income,
+        ...rest
+      } = values;
+
+      const userData = {
+        ...rest,
+        ...(income !== "" && income !== undefined
+          ? { income: Number(income) }
+          : {}),
+        consents: {
+          essential: essentialConsent,
+          financial_services: financialConsent,
+          marketing: marketingConsent,
+        },
+      };
+
       await register(userData);
       // Show success message and navigate to login
       Alert.alert(
@@ -74,10 +152,19 @@ const RegisterScreen = ({ navigation }) => {
 
           <Formik
             initialValues={{
-              name: "",
+              username: "",
+              firstName: "",
+              lastName: "",
               email: "",
+              phoneNumber: "",
+              dateOfBirth: "",
+              employmentStatus: "",
+              income: "",
               password: "",
               confirmPassword: "",
+              essentialConsent: false,
+              financialConsent: false,
+              marketingConsent: false,
             }}
             validationSchema={RegisterSchema}
             onSubmit={handleRegister}
@@ -86,6 +173,7 @@ const RegisterScreen = ({ navigation }) => {
               handleChange,
               handleBlur,
               handleSubmit,
+              setFieldValue,
               values,
               errors,
               touched,
@@ -93,18 +181,49 @@ const RegisterScreen = ({ navigation }) => {
             }) => (
               <View style={styles.formContainer}>
                 <TextInput
-                  label="Full Name"
-                  accessibilityLabel="Full Name"
-                  value={values.name}
-                  onChangeText={handleChange("name")}
-                  onBlur={handleBlur("name")}
+                  label="Username"
+                  accessibilityLabel="Username"
+                  value={values.username}
+                  onChangeText={handleChange("username")}
+                  onBlur={handleBlur("username")}
+                  autoCapitalize="none"
                   style={styles.input}
-                  mode="outlined" // Modern outlined style
-                  error={touched.name && !!errors.name}
-                  left={<TextInput.Icon icon="account-outline" />} // Add icon
+                  mode="outlined"
+                  error={touched.username && !!errors.username}
+                  left={<TextInput.Icon icon="at" />}
                 />
-                {touched.name && errors.name && (
-                  <Text style={styles.errorText}>{errors.name}</Text>
+                {touched.username && errors.username && (
+                  <Text style={styles.errorText}>{errors.username}</Text>
+                )}
+
+                <TextInput
+                  label="First Name"
+                  accessibilityLabel="First Name"
+                  value={values.firstName}
+                  onChangeText={handleChange("firstName")}
+                  onBlur={handleBlur("firstName")}
+                  style={styles.input}
+                  mode="outlined"
+                  error={touched.firstName && !!errors.firstName}
+                  left={<TextInput.Icon icon="account-outline" />}
+                />
+                {touched.firstName && errors.firstName && (
+                  <Text style={styles.errorText}>{errors.firstName}</Text>
+                )}
+
+                <TextInput
+                  label="Last Name"
+                  accessibilityLabel="Last Name"
+                  value={values.lastName}
+                  onChangeText={handleChange("lastName")}
+                  onBlur={handleBlur("lastName")}
+                  style={styles.input}
+                  mode="outlined"
+                  error={touched.lastName && !!errors.lastName}
+                  left={<TextInput.Icon icon="account-outline" />}
+                />
+                {touched.lastName && errors.lastName && (
+                  <Text style={styles.errorText}>{errors.lastName}</Text>
                 )}
 
                 <TextInput
@@ -116,12 +235,107 @@ const RegisterScreen = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={styles.input}
-                  mode="outlined" // Modern outlined style
+                  mode="outlined"
                   error={touched.email && !!errors.email}
-                  left={<TextInput.Icon icon="email-outline" />} // Add icon
+                  left={<TextInput.Icon icon="email-outline" />}
                 />
                 {touched.email && errors.email && (
                   <Text style={styles.errorText}>{errors.email}</Text>
+                )}
+
+                <TextInput
+                  label="Phone Number"
+                  accessibilityLabel="Phone Number"
+                  value={values.phoneNumber}
+                  onChangeText={handleChange("phoneNumber")}
+                  onBlur={handleBlur("phoneNumber")}
+                  keyboardType="phone-pad"
+                  placeholder="+1 555 123 4567"
+                  style={styles.input}
+                  mode="outlined"
+                  error={touched.phoneNumber && !!errors.phoneNumber}
+                  left={<TextInput.Icon icon="phone-outline" />}
+                />
+                {touched.phoneNumber && errors.phoneNumber && (
+                  <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+                )}
+
+                <TextInput
+                  label="Date of Birth (YYYY-MM-DD)"
+                  accessibilityLabel="Date of Birth"
+                  value={values.dateOfBirth}
+                  onChangeText={handleChange("dateOfBirth")}
+                  onBlur={handleBlur("dateOfBirth")}
+                  placeholder="1990-01-31"
+                  style={styles.input}
+                  mode="outlined"
+                  error={touched.dateOfBirth && !!errors.dateOfBirth}
+                  left={<TextInput.Icon icon="calendar-outline" />}
+                />
+                {touched.dateOfBirth && errors.dateOfBirth && (
+                  <Text style={styles.errorText}>{errors.dateOfBirth}</Text>
+                )}
+
+                <Menu
+                  visible={employmentMenuVisible}
+                  onDismiss={() => setEmploymentMenuVisible(false)}
+                  anchor={
+                    <TextInput
+                      label="Employment Status"
+                      accessibilityLabel="Employment Status"
+                      value={
+                        EMPLOYMENT_STATUS_OPTIONS.find(
+                          (opt) => opt.value === values.employmentStatus,
+                        )?.label || ""
+                      }
+                      editable={false}
+                      onPressIn={() => setEmploymentMenuVisible(true)}
+                      style={styles.input}
+                      mode="outlined"
+                      error={
+                        touched.employmentStatus && !!errors.employmentStatus
+                      }
+                      left={<TextInput.Icon icon="briefcase-outline" />}
+                      right={
+                        <TextInput.Icon
+                          icon="menu-down"
+                          onPress={() => setEmploymentMenuVisible(true)}
+                        />
+                      }
+                    />
+                  }
+                >
+                  {EMPLOYMENT_STATUS_OPTIONS.map((opt) => (
+                    <Menu.Item
+                      key={opt.value}
+                      title={opt.label}
+                      onPress={() => {
+                        setFieldValue("employmentStatus", opt.value);
+                        setEmploymentMenuVisible(false);
+                      }}
+                    />
+                  ))}
+                </Menu>
+                {touched.employmentStatus && errors.employmentStatus && (
+                  <Text style={styles.errorText}>
+                    {errors.employmentStatus}
+                  </Text>
+                )}
+
+                <TextInput
+                  label="Annual Income (optional)"
+                  accessibilityLabel="Annual Income"
+                  value={values.income}
+                  onChangeText={handleChange("income")}
+                  onBlur={handleBlur("income")}
+                  keyboardType="numeric"
+                  style={styles.input}
+                  mode="outlined"
+                  error={touched.income && !!errors.income}
+                  left={<TextInput.Icon icon="cash" />}
+                />
+                {touched.income && errors.income && (
+                  <Text style={styles.errorText}>{errors.income}</Text>
                 )}
 
                 <TextInput
@@ -132,9 +346,9 @@ const RegisterScreen = ({ navigation }) => {
                   onBlur={handleBlur("password")}
                   secureTextEntry
                   style={styles.input}
-                  mode="outlined" // Modern outlined style
+                  mode="outlined"
                   error={touched.password && !!errors.password}
-                  left={<TextInput.Icon icon="lock-outline" />} // Add icon
+                  left={<TextInput.Icon icon="lock-outline" />}
                 />
                 {touched.password && errors.password && (
                   <Text style={styles.errorText}>{errors.password}</Text>
@@ -148,13 +362,50 @@ const RegisterScreen = ({ navigation }) => {
                   onBlur={handleBlur("confirmPassword")}
                   secureTextEntry
                   style={styles.input}
-                  mode="outlined" // Modern outlined style
+                  mode="outlined"
                   error={touched.confirmPassword && !!errors.confirmPassword}
-                  left={<TextInput.Icon icon="lock-check-outline" />} // Add icon
+                  left={<TextInput.Icon icon="lock-check-outline" />}
                 />
                 {touched.confirmPassword && errors.confirmPassword && (
                   <Text style={styles.errorText}>{errors.confirmPassword}</Text>
                 )}
+
+                <Checkbox.Item
+                  label="I agree to the Terms of Service and essential data processing (required)"
+                  status={values.essentialConsent ? "checked" : "unchecked"}
+                  onPress={() =>
+                    setFieldValue("essentialConsent", !values.essentialConsent)
+                  }
+                  labelStyle={styles.consentLabel}
+                />
+                {touched.essentialConsent && errors.essentialConsent && (
+                  <Text style={styles.errorText}>
+                    {errors.essentialConsent}
+                  </Text>
+                )}
+
+                <Checkbox.Item
+                  label="I consent to credit checks and financial services processing (required)"
+                  status={values.financialConsent ? "checked" : "unchecked"}
+                  onPress={() =>
+                    setFieldValue("financialConsent", !values.financialConsent)
+                  }
+                  labelStyle={styles.consentLabel}
+                />
+                {touched.financialConsent && errors.financialConsent && (
+                  <Text style={styles.errorText}>
+                    {errors.financialConsent}
+                  </Text>
+                )}
+
+                <Checkbox.Item
+                  label="I'd like to receive product updates and offers (optional)"
+                  status={values.marketingConsent ? "checked" : "unchecked"}
+                  onPress={() =>
+                    setFieldValue("marketingConsent", !values.marketingConsent)
+                  }
+                  labelStyle={styles.consentLabel}
+                />
 
                 {(authError || serverError) && (
                   <Text style={styles.serverErrorText}>
@@ -170,7 +421,7 @@ const RegisterScreen = ({ navigation }) => {
                   labelStyle={styles.buttonLabel}
                   disabled={isSubmitting || loading}
                   loading={loading}
-                  icon="account-plus-outline" // Add icon
+                  icon="account-plus-outline"
                 >
                   Register
                 </Button>
@@ -235,6 +486,10 @@ const createStyles = (theme) =>
     },
     input: {
       marginBottom: theme.spacing.md,
+    },
+    consentLabel: {
+      fontSize: theme.fontSizes.caption,
+      fontFamily: theme.fonts.primary,
     },
     button: {
       marginTop: theme.spacing.lg,

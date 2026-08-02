@@ -235,7 +235,7 @@ const RiskAssessment = () => {
         </Typography>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Borrower
             </Typography>
@@ -244,7 +244,7 @@ const RiskAssessment = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Borrower Address
             </Typography>
@@ -253,7 +253,7 @@ const RiskAssessment = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Principal Amount
             </Typography>
@@ -262,7 +262,7 @@ const RiskAssessment = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary">
               Collateral
             </Typography>
@@ -273,7 +273,7 @@ const RiskAssessment = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="body2" color="text.secondary">
               Purpose
             </Typography>
@@ -282,7 +282,7 @@ const RiskAssessment = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Risk Score (0-100)"
               type="number"
@@ -296,7 +296,7 @@ const RiskAssessment = () => {
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <FormControl fullWidth margin="normal">
               <InputLabel>Recommendation</InputLabel>
               <Select
@@ -310,7 +310,7 @@ const RiskAssessment = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Private Key (for blockchain transaction)"
               type="password"
@@ -323,7 +323,7 @@ const RiskAssessment = () => {
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Box
               sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}
             >

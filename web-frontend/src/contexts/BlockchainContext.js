@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import LendSmartLoanABI from "../utils/LendSmartLoanABI.json";
@@ -118,15 +119,15 @@ export const BlockchainProvider = ({ children }) => {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      const account = accounts[0];
-      setAccount(account);
+      const connectedAccount = accounts[0];
+      setAccount(connectedAccount);
 
       // Get signer
-      const signer = await provider.getSigner();
-      setSigner(signer);
+      const newSigner = await provider.getSigner();
+      setSigner(newSigner);
 
       // Connect contract with signer
-      const contractWithSigner = lendSmartLoanContract.connect(signer);
+      const contractWithSigner = lendSmartLoanContract.connect(newSigner);
       setLendSmartLoanContract(contractWithSigner);
 
       setIsConnected(true);
@@ -139,418 +140,114 @@ export const BlockchainProvider = ({ children }) => {
   }, [provider, lendSmartLoanContract]);
 
   // Disconnect wallet
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     setAccount(null);
     setSigner(null);
     setIsConnected(false);
-  };
+  }, []);
 
   // Request a loan
-  const requestLoan = async (loanData) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.requestLoan(
-        loanData.token,
-        ethers.parseUnits(
-          loanData.principal.toString(),
-          loanData.decimals || 18,
-        ),
-        loanData.interestRate,
-        loanData.duration,
-        loanData.purpose,
-        loanData.isCollateralized || false,
-        loanData.collateralToken || ethers.ZeroAddress,
-        loanData.collateralAmount
-          ? ethers.parseUnits(
-              loanData.collateralAmount.toString(),
-              loanData.collateralDecimals || 18,
-            )
-          : 0,
-      );
-
-      const receipt = await tx.wait();
-
-      // Find the LoanRequested event to get the loan ID
-      const event = receipt.logs
-        .filter((log) => log.fragment && log.fragment.name === "LoanRequested")
-        .map((log) => {
-          return {
-            loanId: log.args.loanId.toString(),
-            borrower: log.args.borrower,
-            token: log.args.token,
-            principal: log.args.principal.toString(),
-            interestRate: log.args.interestRate.toString(),
-            duration: log.args.duration.toString(),
-            purpose: log.args.purpose,
-            isCollateralized: log.args.isCollateralized,
-          };
-        })[0];
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        loanId: event.loanId,
-        event,
-      };
-    } catch (err) {
-      console.error("Error requesting loan:", err);
-      setError("Failed to request loan");
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Get user loans
-  const getUserLoans = async (userAddress) => {
-    if (!lendSmartLoanContract) {
-      setError("Contract not initialized");
-      return [];
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const address = userAddress || account;
-      if (!address) {
-        setError("No address provided");
-        setIsLoading(false);
-        return [];
-      }
-
-      const loanIds = await lendSmartLoanContract.getUserLoans(address);
-
-      setIsLoading(false);
-      return loanIds.map((id) => id.toString());
-    } catch (err) {
-      console.error("Error getting user loans:", err);
-      setError("Failed to get user loans");
-      setIsLoading(false);
-      return [];
-    }
-  };
-
-  // Get loan details
-  const getLoanDetails = async (loanId) => {
-    if (!lendSmartLoanContract) {
-      setError("Contract not initialized");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const [loan, schedule, amounts] =
-        await lendSmartLoanContract.getLoanDetails(loanId);
-
-      // Convert BigInt values to strings for JSON compatibility
-      const formattedLoan = {
-        id: loan.id.toString(),
-        borrower: loan.borrower,
-        lender: loan.lender,
-        token: loan.token,
-        principal: loan.principal.toString(),
-        interestRate: loan.interestRate.toString(),
-        duration: loan.duration.toString(),
-        requestedTime: loan.requestedTime.toString(),
-        fundedTime: loan.fundedTime.toString(),
-        disbursedTime: loan.disbursedTime.toString(),
-        repaymentAmount: loan.repaymentAmount.toString(),
-        amountRepaid: loan.amountRepaid.toString(),
-        riskScore: loan.riskScore.toString(),
-        status: getLoanStatusString(loan.status),
-        purpose: loan.purpose,
-        isCollateralized: loan.isCollateralized,
-        collateralAmount: loan.collateralAmount.toString(),
-        collateralToken: loan.collateralToken,
-      };
-
-      // Format schedule and amounts
-      const formattedSchedule = schedule.map((time) => time.toString());
-      const formattedAmounts = amounts.map((amount) => amount.toString());
-
-      setIsLoading(false);
-      return {
-        loan: formattedLoan,
-        repaymentSchedule: formattedSchedule,
-        repaymentAmounts: formattedAmounts,
-      };
-    } catch (err) {
-      console.error("Error getting loan details:", err);
-      setError(`Failed to get details for loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Fund a loan
-  const fundLoan = async (loanId) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.fundLoan(loanId);
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error funding loan:", err);
-      setError(`Failed to fund loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Disburse a loan
-  const disburseLoan = async (loanId) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.disburseLoan(loanId);
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error disbursing loan:", err);
-      setError(`Failed to disburse loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Repay a loan
-  const repayLoan = async (loanId, amount, decimals = 18) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.repayLoan(
-        loanId,
-        ethers.parseUnits(amount, decimals),
-      );
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error repaying loan:", err);
-      setError(`Failed to repay loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Deposit collateral
-  const depositCollateral = async (loanId) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.depositCollateral(loanId);
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error depositing collateral:", err);
-      setError(`Failed to deposit collateral for loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Create repayment schedule
-  const createRepaymentSchedule = async (loanId, numberOfPayments) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.createRepaymentSchedule(
-        loanId,
-        numberOfPayments,
-      );
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error creating repayment schedule:", err);
-      setError(`Failed to create repayment schedule for loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Cancel a loan request
-  const cancelLoanRequest = async (loanId) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.cancelLoanRequest(loanId);
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error cancelling loan request:", err);
-      setError(`Failed to cancel loan request ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Set loan risk score (only callable by risk assessor)
-  const setLoanRiskScore = async (loanId, riskScore, shouldReject = false) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.setLoanRiskScore(
-        loanId,
-        riskScore,
-        shouldReject,
-      );
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error setting loan risk score:", err);
-      setError(`Failed to set risk score for loan ID ${loanId}`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Mark a loan as defaulted (only callable by lender or owner)
-  const markLoanAsDefaulted = async (loanId) => {
-    if (!isConnected) {
-      setError("Please connect your wallet first");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const tx = await lendSmartLoanContract.markLoanAsDefaulted(loanId);
-      const receipt = await tx.wait();
-
-      setIsLoading(false);
-      return {
-        transactionHash: receipt.hash,
-        status: receipt.status === 1 ? "success" : "failed",
-      };
-    } catch (err) {
-      console.error("Error marking loan as defaulted:", err);
-      setError(`Failed to mark loan ID ${loanId} as defaulted`);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  // Get user reputation score
-  const getUserReputationScore = async (userAddress) => {
-    if (!lendSmartLoanContract) {
-      setError("Contract not initialized");
-      return null;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const address = userAddress || account;
-      if (!address) {
-        setError("No address provided");
-        setIsLoading(false);
+  const requestLoan = useCallback(
+    async (loanData) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
         return null;
       }
 
-      const score = await lendSmartLoanContract.getUserReputationScore(address);
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      setIsLoading(false);
-      return score.toString();
-    } catch (err) {
-      console.error("Error getting user reputation score:", err);
-      setError(
-        `Failed to get reputation score for user ${userAddress || account}`,
-      );
-      setIsLoading(false);
-      return null;
-    }
-  };
+        const tx = await lendSmartLoanContract.requestLoan(
+          loanData.token,
+          ethers.parseUnits(
+            loanData.principal.toString(),
+            loanData.decimals || 18,
+          ),
+          loanData.interestRate,
+          loanData.duration,
+          loanData.purpose,
+          loanData.isCollateralized || false,
+          loanData.collateralToken || ethers.ZeroAddress,
+          loanData.collateralAmount
+            ? ethers.parseUnits(
+                loanData.collateralAmount.toString(),
+                loanData.collateralDecimals || 18,
+              )
+            : 0,
+        );
+
+        const receipt = await tx.wait();
+
+        // Find the LoanRequested event to get the loan ID
+        const event = receipt.logs
+          .filter(
+            (log) => log.fragment && log.fragment.name === "LoanRequested",
+          )
+          .map((log) => {
+            return {
+              loanId: log.args.loanId.toString(),
+              borrower: log.args.borrower,
+              token: log.args.token,
+              principal: log.args.principal.toString(),
+              interestRate: log.args.interestRate.toString(),
+              duration: log.args.duration.toString(),
+              purpose: log.args.purpose,
+              isCollateralized: log.args.isCollateralized,
+            };
+          })[0];
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          loanId: event.loanId,
+          event,
+        };
+      } catch (err) {
+        console.error("Error requesting loan:", err);
+        setError("Failed to request loan");
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Get user loans
+  const getUserLoans = useCallback(
+    async (userAddress) => {
+      if (!lendSmartLoanContract) {
+        setError("Contract not initialized");
+        return [];
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const address = userAddress || account;
+        if (!address) {
+          setError("No address provided");
+          setIsLoading(false);
+          return [];
+        }
+
+        const loanIds = await lendSmartLoanContract.getUserLoans(address);
+
+        setIsLoading(false);
+        return loanIds.map((id) => id.toString());
+      } catch (err) {
+        console.error("Error getting user loans:", err);
+        setError("Failed to get user loans");
+        setIsLoading(false);
+        return [];
+      }
+    },
+    [lendSmartLoanContract, account],
+  );
 
   // Helper function to convert numeric loan status to string
-  const getLoanStatusString = (statusCode) => {
+  const getLoanStatusString = useCallback((statusCode) => {
     const statusMap = {
       0: "Requested",
       1: "Funded",
@@ -562,33 +259,405 @@ export const BlockchainProvider = ({ children }) => {
     };
 
     return statusMap[statusCode] || "Unknown";
-  };
+  }, []);
 
-  // Context value
-  const value = {
-    provider,
-    signer,
-    account,
-    chainId,
-    lendSmartLoanContract,
-    isConnected,
-    isLoading,
-    error,
-    connectWallet,
-    disconnectWallet,
-    requestLoan,
-    getUserLoans,
-    getLoanDetails,
-    fundLoan,
-    disburseLoan,
-    repayLoan,
-    depositCollateral,
-    createRepaymentSchedule,
-    cancelLoanRequest,
-    setLoanRiskScore,
-    markLoanAsDefaulted,
-    getUserReputationScore,
-  };
+  // Get loan details
+  const getLoanDetails = useCallback(
+    async (loanId) => {
+      if (!lendSmartLoanContract) {
+        setError("Contract not initialized");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const [loan, schedule, amounts] =
+          await lendSmartLoanContract.getLoanDetails(loanId);
+
+        // Convert BigInt values to strings for JSON compatibility
+        const formattedLoan = {
+          id: loan.id.toString(),
+          borrower: loan.borrower,
+          lender: loan.lender,
+          token: loan.token,
+          principal: loan.principal.toString(),
+          interestRate: loan.interestRate.toString(),
+          duration: loan.duration.toString(),
+          requestedTime: loan.requestedTime.toString(),
+          fundedTime: loan.fundedTime.toString(),
+          disbursedTime: loan.disbursedTime.toString(),
+          repaymentAmount: loan.repaymentAmount.toString(),
+          amountRepaid: loan.amountRepaid.toString(),
+          riskScore: loan.riskScore.toString(),
+          status: getLoanStatusString(loan.status),
+          purpose: loan.purpose,
+          isCollateralized: loan.isCollateralized,
+          collateralAmount: loan.collateralAmount.toString(),
+          collateralToken: loan.collateralToken,
+        };
+
+        // Format schedule and amounts
+        const formattedSchedule = schedule.map((time) => time.toString());
+        const formattedAmounts = amounts.map((amount) => amount.toString());
+
+        setIsLoading(false);
+        return {
+          loan: formattedLoan,
+          repaymentSchedule: formattedSchedule,
+          repaymentAmounts: formattedAmounts,
+        };
+      } catch (err) {
+        console.error("Error getting loan details:", err);
+        setError(`Failed to get details for loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [lendSmartLoanContract, getLoanStatusString],
+  );
+
+  // Fund a loan
+  const fundLoan = useCallback(
+    async (loanId) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.fundLoan(loanId);
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error funding loan:", err);
+        setError(`Failed to fund loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Disburse a loan
+  const disburseLoan = useCallback(
+    async (loanId) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.disburseLoan(loanId);
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error disbursing loan:", err);
+        setError(`Failed to disburse loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Repay a loan
+  const repayLoan = useCallback(
+    async (loanId, amount, decimals = 18) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.repayLoan(
+          loanId,
+          ethers.parseUnits(amount, decimals),
+        );
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error repaying loan:", err);
+        setError(`Failed to repay loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Deposit collateral
+  const depositCollateral = useCallback(
+    async (loanId) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.depositCollateral(loanId);
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error depositing collateral:", err);
+        setError(`Failed to deposit collateral for loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Create repayment schedule
+  const createRepaymentSchedule = useCallback(
+    async (loanId, numberOfPayments) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.createRepaymentSchedule(
+          loanId,
+          numberOfPayments,
+        );
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error creating repayment schedule:", err);
+        setError(`Failed to create repayment schedule for loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Cancel a loan request
+  const cancelLoanRequest = useCallback(
+    async (loanId) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.cancelLoanRequest(loanId);
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error cancelling loan request:", err);
+        setError(`Failed to cancel loan request ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Set loan risk score (only callable by risk assessor)
+  const setLoanRiskScore = useCallback(
+    async (loanId, riskScore, shouldReject = false) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.setLoanRiskScore(
+          loanId,
+          riskScore,
+          shouldReject,
+        );
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error setting loan risk score:", err);
+        setError(`Failed to set risk score for loan ID ${loanId}`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Mark a loan as defaulted (only callable by lender or owner)
+  const markLoanAsDefaulted = useCallback(
+    async (loanId) => {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const tx = await lendSmartLoanContract.markLoanAsDefaulted(loanId);
+        const receipt = await tx.wait();
+
+        setIsLoading(false);
+        return {
+          transactionHash: receipt.hash,
+          status: receipt.status === 1 ? "success" : "failed",
+        };
+      } catch (err) {
+        console.error("Error marking loan as defaulted:", err);
+        setError(`Failed to mark loan ID ${loanId} as defaulted`);
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [isConnected, lendSmartLoanContract],
+  );
+
+  // Get user reputation score
+  const getUserReputationScore = useCallback(
+    async (userAddress) => {
+      if (!lendSmartLoanContract) {
+        setError("Contract not initialized");
+        return null;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const address = userAddress || account;
+        if (!address) {
+          setError("No address provided");
+          setIsLoading(false);
+          return null;
+        }
+
+        const score =
+          await lendSmartLoanContract.getUserReputationScore(address);
+
+        setIsLoading(false);
+        return score.toString();
+      } catch (err) {
+        console.error("Error getting user reputation score:", err);
+        setError(
+          `Failed to get reputation score for user ${userAddress || account}`,
+        );
+        setIsLoading(false);
+        return null;
+      }
+    },
+    [lendSmartLoanContract, account],
+  );
+
+  // Context value. Memoized so functions passed to consumers (e.g. used as
+  // useEffect dependencies) keep a stable reference across renders — without
+  // this, an effect that depends on one of these functions re-fires on every
+  // render, which can spiral into an infinite fetch loop.
+  const value = useMemo(
+    () => ({
+      provider,
+      signer,
+      account,
+      chainId,
+      lendSmartLoanContract,
+      isConnected,
+      isLoading,
+      error,
+      connectWallet,
+      disconnectWallet,
+      requestLoan,
+      getUserLoans,
+      getLoanDetails,
+      fundLoan,
+      disburseLoan,
+      repayLoan,
+      depositCollateral,
+      createRepaymentSchedule,
+      cancelLoanRequest,
+      setLoanRiskScore,
+      markLoanAsDefaulted,
+      getUserReputationScore,
+    }),
+    [
+      provider,
+      signer,
+      account,
+      chainId,
+      lendSmartLoanContract,
+      isConnected,
+      isLoading,
+      error,
+      connectWallet,
+      disconnectWallet,
+      requestLoan,
+      getUserLoans,
+      getLoanDetails,
+      fundLoan,
+      disburseLoan,
+      repayLoan,
+      depositCollateral,
+      createRepaymentSchedule,
+      cancelLoanRequest,
+      setLoanRiskScore,
+      markLoanAsDefaulted,
+      getUserReputationScore,
+    ],
+  );
 
   return (
     <BlockchainContext.Provider value={value}>

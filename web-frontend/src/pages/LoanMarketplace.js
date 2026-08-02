@@ -46,7 +46,7 @@ const LoanMarketplace = () => {
       // Only get loans with status 'Requested' for the marketplace
       const result = await getLoans({ status: "Requested" });
 
-      setLoans(result.data);
+      setLoans(result.data?.loans || []);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching loans:", err);
@@ -97,7 +97,7 @@ const LoanMarketplace = () => {
 
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               placeholder="Search loans by purpose, borrower, or ID"
@@ -113,7 +113,7 @@ const LoanMarketplace = () => {
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 label="Min Amount"
@@ -210,7 +210,7 @@ const LoanMarketplace = () => {
                   <Divider sx={{ my: 1.5 }} />
 
                   <Grid container spacing={1}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2" color="text.secondary">
                         Principal:
                       </Typography>
@@ -218,7 +218,7 @@ const LoanMarketplace = () => {
                         {loan.principal} Tokens
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2" color="text.secondary">
                         Interest Rate:
                       </Typography>
@@ -226,7 +226,7 @@ const LoanMarketplace = () => {
                         {loan.interestRate}%
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2" color="text.secondary">
                         Duration:
                       </Typography>
@@ -234,7 +234,7 @@ const LoanMarketplace = () => {
                         {loan.duration} days
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2" color="text.secondary">
                         Collateralized:
                       </Typography>

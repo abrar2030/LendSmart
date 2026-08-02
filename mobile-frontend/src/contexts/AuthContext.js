@@ -247,11 +247,11 @@ export const AuthProvider = ({ children }) => {
         refreshToken: currentRefreshToken,
       });
       const {
-        token: newToken,
+        accessToken: newToken,
         refreshToken: newRefreshToken,
         expiresIn,
         user: userData,
-      } = response.data;
+      } = response.data.data || {};
 
       if (newToken) {
         setToken(newToken);

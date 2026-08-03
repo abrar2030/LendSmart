@@ -13,7 +13,7 @@ import AuthLayout from "../components/layout/AuthLayout";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, loading, error: apiError } = useApi();
+  const { login, loading } = useApi();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState(null);
@@ -43,9 +43,9 @@ const Login = () => {
         Welcome back. Pick up where you left off.
       </Typography>
 
-      {(error || apiError) && (
+      {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error || apiError}
+          {error}
         </Alert>
       )}
 

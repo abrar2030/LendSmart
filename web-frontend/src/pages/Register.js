@@ -56,7 +56,7 @@ const initialFormData = {
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, loading, error: apiError } = useApi();
+  const { register, loading } = useApi();
 
   const [formData, setFormData] = useState(initialFormData);
   const [consents, setConsents] = useState({
@@ -159,9 +159,9 @@ const Register = () => {
         Create an account to borrow or lend in minutes.
       </Typography>
 
-      {(error || apiError) && (
+      {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error || apiError}
+          {error}
         </Alert>
       )}
 

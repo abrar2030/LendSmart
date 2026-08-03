@@ -1,12 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/auth");
+const { protect, optionalProtect } = require("../middleware/auth");
+const { authLimiter } = require("../middleware/security/rateLimiter");
 const authController = require("../controllers/authController");
 
 // Public routes
-router.post("/register", (req, res) => authController.register(req, res));
-router.post("/login", (req, res) => authController.login(req, res));
-router.post("/logout", (req, res) => authController.logout(req, res));
+router.post("/register", authLimiter, (req, res) =>
+  authController.register(req, res),
+);
+router.post("/login", authLimiter, (req, res) =>
+  authController.login(req, res),
+);
+router.post("/logout", optionalProtect, (req, res) =>
+  authController.logout(req, res),
+);
+// Canonical endpoint (matches docs/API.md and both web + mobile clients).
+router.post("/refresh", (req, res) => authController.refreshToken(req, res));
+// Kept for backward compatibility with existing tests/integrations.
 router.post("/refresh-token", (req, res) =>
   authController.refreshToken(req, res),
 );

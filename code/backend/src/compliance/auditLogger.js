@@ -3,6 +3,7 @@ const DailyRotateFile = require("winston-daily-rotate-file");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const { getEncryptionService } = require("../config/security/encryption");
+const { safeSetTimeout } = require("../utils/safeTimeout");
 
 // Redis client with fallback for development
 let redisClient;
@@ -18,7 +19,7 @@ try {
     get: async (key) => memoryStore.get(key) || null,
     setex: async (key, ttl, value) => {
       memoryStore.set(key, value);
-      setTimeout(() => memoryStore.delete(key), ttl * 1000);
+      safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
     },
     del: async (key) => memoryStore.delete(key),
   };

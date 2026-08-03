@@ -208,9 +208,14 @@ class LendSmartServer {
     this.app.use(httpMetricsMiddleware());
 
     // Rate limiting - disabled in test environment
+    // Note: the strict authLimiter (5 req / 15 min) is applied directly to
+    // the sensitive /login and /register routes in authRoutes.js, rather
+    // than to the whole /api/auth/* prefix. Applying it prefix-wide meant
+    // routine calls like /me, /logout and /refresh shared the same tiny
+    // budget as credential guessing attempts, and could lock a legitimate
+    // user out of the app after only a few page loads or token refreshes.
     if (process.env.NODE_ENV !== "test") {
       this.app.use("/api/", rateLimiter.globalLimiter);
-      this.app.use("/api/auth/", rateLimiter.authLimiter);
     }
 
     // Request ID middleware

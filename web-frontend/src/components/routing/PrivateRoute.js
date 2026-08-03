@@ -4,9 +4,9 @@ import { Navigate } from "react-router-dom";
 import { useApi } from "../../contexts/ApiContext";
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useApi();
+  const { isAuthenticated, authLoading } = useApi();
 
-  if (loading) {
+  if (authLoading) {
     return (
       <Box
         sx={{

@@ -3,6 +3,8 @@
  * Provides in-memory fallback when Redis is not available
  */
 
+const { safeSetTimeout } = require("../utils/safeTimeout");
+
 // In-memory fallback for development
 const memoryStore = new Map();
 
@@ -14,12 +16,12 @@ const memoryClient = {
   },
   setEx: async (key, ttl, value) => {
     memoryStore.set(key, value);
-    setTimeout(() => memoryStore.delete(key), ttl * 1000);
+    safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
     return "OK";
   },
   setex: async (key, ttl, value) => {
     memoryStore.set(key, value);
-    setTimeout(() => memoryStore.delete(key), ttl * 1000);
+    safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
     return "OK";
   },
   del: async (key) => {
@@ -35,7 +37,7 @@ const memoryClient = {
   },
   expire: async (key, ttl) => {
     if (memoryStore.has(key)) {
-      setTimeout(() => memoryStore.delete(key), ttl * 1000);
+      safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
       return 1;
     }
     return 0;

@@ -12,6 +12,31 @@ import {
 // told to send credentials (cookies) on cross-origin requests for that to work.
 axios.defaults.withCredentials = true;
 
+// The access token is mirrored into this module-scoped variable (in
+// addition to React state) so it can be read *synchronously*, at the exact
+// moment each request is dispatched, by the request interceptor below.
+//
+// Previously the Authorization header was only ever set inside a
+// useEffect. That created a real race: after login(), navigate("/dashboard")
+// mounts Dashboard in the same commit as ApiProvider's own re-render, and
+// React fires passive effects child-first - so Dashboard's own data-fetch
+// effect could run *before* ApiProvider's effect had a chance to set
+// axios.defaults.headers.common.Authorization. The very first authenticated
+// request after login would then go out with no token, get a 401, trigger
+// the (also broken) refresh flow, and the app would immediately log itself
+// back out - bouncing straight back to the login page.
+//
+// Reading a synchronously-updated variable at request-dispatch time removes
+// the dependency on effect ordering entirely.
+let currentAccessToken = localStorage.getItem("token");
+
+axios.interceptors.request.use((config) => {
+  if (currentAccessToken && !config.headers?.Authorization) {
+    config.headers.Authorization = `Bearer ${currentAccessToken}`;
+  }
+  return config;
+});
+
 // Create API context
 const ApiContext = createContext();
 
@@ -20,45 +45,63 @@ export const useApi = () => useContext(ApiContext);
 export const ApiProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(currentAccessToken);
   const [loading, setLoading] = useState(false);
+  // Tracks only the one-time "do we have a valid session?" bootstrap check
+  // performed on initial app load. Kept separate from the generic
+  // per-request `loading` flag above so route guards (PrivateRoute) don't
+  // flicker or momentarily bounce to /login every time some unrelated
+  // page-level API call starts or finishes.
+  const [authLoading, setAuthLoading] = useState(!!currentAccessToken);
   const [error, setError] = useState(null);
 
   // API base URL - should be environment variable in production
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000/api";
 
+  // Synchronously updates the access token everywhere it's tracked: the
+  // module-level variable read by the request interceptor, localStorage,
+  // and React state (for components that render based on it).
+  const applyToken = useCallback((newToken) => {
+    currentAccessToken = newToken;
+    if (newToken) {
+      localStorage.setItem("token", newToken);
+    } else {
+      localStorage.removeItem("token");
+    }
+    setToken(newToken);
+  }, []);
+
   // Load user data
   const loadUser = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
 
       const res = await axios.get(`${API_URL}/auth/me`);
 
       setUser(res.data.data.user);
       setIsAuthenticated(true);
-      setLoading(false);
     } catch (err) {
       console.error("Error loading user:", err);
       setError("Failed to load user data");
-      setToken(null);
+      applyToken(null);
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem("token");
-      setLoading(false);
+    } finally {
+      setAuthLoading(false);
     }
-  }, [API_URL]);
+  }, [API_URL, applyToken]);
 
-  // Configure axios with token
+  // Keep isAuthenticated/user in sync whenever the token changes. The
+  // Authorization header itself no longer depends on this effect at all -
+  // it's applied synchronously by applyToken()/the request interceptor.
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
       setIsAuthenticated(true);
       loadUser();
     } else {
-      delete axios.defaults.headers.common.Authorization;
       setIsAuthenticated(false);
       setUser(null);
+      setAuthLoading(false);
     }
   }, [token, loadUser]);
 
@@ -80,7 +123,7 @@ export const ApiProvider = ({ children }) => {
           err.response?.status !== 401 ||
           isAuthEndpoint ||
           originalRequest._retry ||
-          !localStorage.getItem("token")
+          !currentAccessToken
         ) {
           return Promise.reject(err);
         }
@@ -102,25 +145,24 @@ export const ApiProvider = ({ children }) => {
             throw new Error("No access token in refresh response");
           }
 
-          setToken(newAccessToken);
-          localStorage.setItem("token", newAccessToken);
-          axios.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          applyToken(newAccessToken);
+          // currentAccessToken is already updated by applyToken() above, so
+          // re-dispatching through axios() will pick up the new header via
+          // the request interceptor automatically.
+          delete originalRequest.headers?.Authorization;
 
           return axios(originalRequest);
         } catch (refreshErr) {
-          setToken(null);
-          localStorage.removeItem("token");
+          applyToken(null);
           setIsAuthenticated(false);
           setUser(null);
-          delete axios.defaults.headers.common.Authorization;
           return Promise.reject(err);
         }
       },
     );
 
     return () => axios.interceptors.response.eject(interceptor);
-  }, [API_URL]);
+  }, [API_URL, applyToken]);
 
   // Register user
   const register = useCallback(
@@ -158,10 +200,13 @@ export const ApiProvider = ({ children }) => {
         });
 
         const { user: loggedInUser, accessToken } = res.data.data;
-        setToken(accessToken);
-        localStorage.setItem("token", accessToken);
+        // Synchronous: any request dispatched immediately after login()
+        // resolves (even from a page that mounts in the same render pass)
+        // will already carry the correct Authorization header.
+        applyToken(accessToken);
         setUser(loggedInUser);
         setIsAuthenticated(true);
+        setAuthLoading(false);
         setLoading(false);
 
         return res.data;
@@ -172,23 +217,23 @@ export const ApiProvider = ({ children }) => {
         throw err;
       }
     },
-    [API_URL],
+    [API_URL, applyToken],
   );
 
   // Logout user
   const logout = useCallback(async () => {
     try {
-      await axios.get(`${API_URL}/auth/logout`);
+      // Must be POST to match the backend route (GET was a mismatch that
+      // 404'd and, worse, still counted against the auth rate limiter).
+      await axios.post(`${API_URL}/auth/logout`);
     } catch (err) {
       console.error("Error logging out:", err);
     } finally {
-      setToken(null);
-      localStorage.removeItem("token");
+      applyToken(null);
       setIsAuthenticated(false);
       setUser(null);
-      delete axios.defaults.headers.common.Authorization;
     }
-  }, [API_URL]);
+  }, [API_URL, applyToken]);
 
   // Update user profile
   const updateProfile = useCallback(
@@ -527,6 +572,7 @@ export const ApiProvider = ({ children }) => {
       isAuthenticated,
       user,
       loading,
+      authLoading,
       error,
       register,
       login,
@@ -551,6 +597,7 @@ export const ApiProvider = ({ children }) => {
       isAuthenticated,
       user,
       loading,
+      authLoading,
       error,
       register,
       login,

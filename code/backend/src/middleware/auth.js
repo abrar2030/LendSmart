@@ -94,6 +94,43 @@ exports.protect = async (req, res, next) => {
 };
 
 /**
+ * Optionally identify the requesting user without blocking the request.
+ * Used for routes (like logout) that should succeed even if the access
+ * token is missing/expired, but that still want req.user when available
+ * so they can perform user-scoped cleanup (e.g. revoking sessions).
+ */
+exports.optionalProtect = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret);
+    const user = await User.findById(decoded.id).select(
+      "-password -mfaSecret -mfaBackupCodes",
+    );
+    if (user) {
+      req.user = user;
+    }
+  } catch (err) {
+    // Ignore invalid/expired tokens here - this middleware never blocks.
+  }
+
+  next();
+};
+
+/**
  * Grant access to specific roles
  */
 exports.authorize = (...roles) => {

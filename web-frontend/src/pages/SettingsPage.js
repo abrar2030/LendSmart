@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useApi } from "../contexts/ApiContext";
 
 const SettingsPage = () => {
-  const { updatePassword, loading, error: apiError } = useApi();
+  const { updatePassword, loading } = useApi();
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -67,9 +67,9 @@ const SettingsPage = () => {
           Change Password
         </Typography>
         <Divider sx={{ mb: 3 }} />
-        {(error || apiError) && (
+        {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error || apiError}
+            {error}
           </Alert>
         )}
         {success && (

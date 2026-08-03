@@ -9,6 +9,7 @@ const { getEncryptionService } = require("../config/security/encryption");
 const { getAuditLogger } = require("../compliance/auditLogger");
 const { logger } = require("../utils/logger");
 const jwtConfig = require("../config/jwt");
+const { safeSetTimeout } = require("../utils/safeTimeout");
 
 // Redis client with fallback for development
 let redisClient;
@@ -25,7 +26,7 @@ try {
     set: async (key, value) => memoryStore.set(key, value),
     setex: async (key, ttl, value) => {
       memoryStore.set(key, value);
-      setTimeout(() => memoryStore.delete(key), ttl * 1000);
+      safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
     },
     del: async (key) => memoryStore.delete(key),
     incr: async (key) => {
@@ -35,7 +36,7 @@ try {
       return newValue;
     },
     expire: async (key, ttl) => {
-      setTimeout(() => memoryStore.delete(key), ttl * 1000);
+      safeSetTimeout(() => memoryStore.delete(key), ttl * 1000);
     },
     ttl: async (key) => {
       // Simplified TTL implementation for development

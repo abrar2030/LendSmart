@@ -27,7 +27,7 @@ import { useBlockchain } from "../contexts/BlockchainContext";
 
 const LoanApplicationPage = () => {
   const navigate = useNavigate();
-  const { applyForLoan, loading: apiLoading, error: apiError } = useApi();
+  const { applyForLoan, loading: apiLoading } = useApi();
   const { requestLoan, isConnected, connectWallet } = useBlockchain();
 
   const [activeStep, setActiveStep] = useState(0);
@@ -644,9 +644,9 @@ const LoanApplicationPage = () => {
           ))}
         </Stepper>
 
-        {(error || apiError) && (
+        {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
-            {error || apiError}
+            {error}
           </Alert>
         )}
 

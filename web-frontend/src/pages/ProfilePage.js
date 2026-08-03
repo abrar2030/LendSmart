@@ -19,12 +19,7 @@ import { useApi } from "../contexts/ApiContext";
 import { useBlockchain } from "../contexts/BlockchainContext";
 
 const ProfilePage = () => {
-  const {
-    user,
-    updateProfile,
-    loading: apiLoading,
-    error: apiError,
-  } = useApi();
+  const { user, updateProfile, loading: apiLoading } = useApi();
   const { account, isConnected, connectWallet, getUserReputationScore } =
     useBlockchain();
 
@@ -235,9 +230,9 @@ const ProfilePage = () => {
               )}
             </Box>
 
-            {(error || apiError) && (
+            {error && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {error || apiError}
+                {error}
               </Alert>
             )}
 

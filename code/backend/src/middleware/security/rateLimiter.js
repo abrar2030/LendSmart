@@ -72,6 +72,12 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => `auth:${req.ip}`,
   skipSuccessfulRequests: true, // Don't count successful requests
+  // Rate limiting is disabled in the test environment (this mirrors the
+  // NODE_ENV guard server.js previously used around applying this limiter
+  // app-wide; now that it's applied directly to /login and /register in
+  // authRoutes.js, it needs its own guard so test suites that make more
+  // than 5 auth requests in a row aren't spuriously rate-limited).
+  skip: () => process.env.NODE_ENV === "test",
   handler: (req, res) => {
     logger.warn("Auth rate limit exceeded", {
       ip: req.ip,

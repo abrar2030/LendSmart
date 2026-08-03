@@ -4,6 +4,7 @@ const { getAuditLogger } = require("./auditLogger");
 const User = require("../models/User");
 const Loan = require("../models/Loan");
 const { logger } = require("../utils/logger");
+const { safeSetTimeout } = require("../utils/safeTimeout");
 
 // Redis with in-memory fallback
 let redisClient;
@@ -15,12 +16,12 @@ try {
     get: async (k) => store.get(k) || null,
     setex: async (k, ttl, v) => {
       store.set(k, v);
-      setTimeout(() => store.delete(k), ttl * 1000);
+      safeSetTimeout(() => store.delete(k), ttl * 1000);
       return "OK";
     },
     setEx: async (k, ttl, v) => {
       store.set(k, v);
-      setTimeout(() => store.delete(k), ttl * 1000);
+      safeSetTimeout(() => store.delete(k), ttl * 1000);
       return "OK";
     },
     del: async (k) => {

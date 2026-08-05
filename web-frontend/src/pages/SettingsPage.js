@@ -1,12 +1,18 @@
+import ShieldIcon from "@mui/icons-material/Shield";
+import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
+  Card,
+  Chip,
   CircularProgress,
   Divider,
-  FormControlLabel,
   Grid,
+  FormControlLabel,
   Paper,
+  Stack,
   Switch,
   TextField,
   Typography,
@@ -15,7 +21,7 @@ import { useState } from "react";
 import { useApi } from "../contexts/ApiContext";
 
 const SettingsPage = () => {
-  const { updatePassword, loading } = useApi();
+  const { updatePassword, setupMFA, verifyMFA, user, loading } = useApi();
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -28,6 +34,44 @@ const SettingsPage = () => {
   });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  // MFA setup flow
+  const [mfaSetup, setMfaSetup] = useState(null); // { qrCode, backupCodes }
+  const [mfaToken, setMfaToken] = useState("");
+  const [mfaError, setMfaError] = useState(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaEnabledJustNow, setMfaEnabledJustNow] = useState(false);
+
+  const isMfaEnabled = user?.mfaEnabled || mfaEnabledJustNow;
+
+  const handleStartMfaSetup = async () => {
+    setMfaError(null);
+    setMfaLoading(true);
+    try {
+      const result = await setupMFA();
+      setMfaSetup(result.data);
+    } catch (err) {
+      setMfaError(err.response?.data?.message || "Failed to start MFA setup");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleVerifyMfa = async (e) => {
+    e.preventDefault();
+    setMfaError(null);
+    setMfaLoading(true);
+    try {
+      await verifyMFA(mfaToken);
+      setMfaEnabledJustNow(true);
+      setMfaSetup(null);
+      setMfaToken("");
+    } catch (err) {
+      setMfaError(err.response?.data?.message || "Invalid verification code");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
 
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
@@ -119,6 +163,143 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
         </form>
+      </Paper>
+
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Avatar sx={{ bgcolor: "secondary.main" }}>
+              <ShieldIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">Two-Factor Authentication</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Add an extra layer of security to your account
+              </Typography>
+            </Box>
+          </Stack>
+          {isMfaEnabled && (
+            <Chip
+              icon={<VerifiedUserIcon />}
+              label="Enabled"
+              color="success"
+              variant="outlined"
+            />
+          )}
+        </Stack>
+        <Divider sx={{ my: 3 }} />
+
+        {mfaError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {mfaError}
+          </Alert>
+        )}
+
+        {isMfaEnabled ? (
+          <Alert severity="success">
+            Two-factor authentication is active on your account. You will be
+            asked for a code from your authenticator app whenever you sign in.
+          </Alert>
+        ) : mfaSetup ? (
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 5 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                1. Scan this QR code
+              </Typography>
+              <Box
+                component="img"
+                src={mfaSetup.qrCode}
+                alt="MFA QR code"
+                sx={{
+                  width: "100%",
+                  maxWidth: 200,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 1,
+                }}
+              />
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                sx={{ mt: 1 }}
+              >
+                Use an authenticator app such as Google Authenticator or Authy.
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 7 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                2. Save your backup codes
+              </Typography>
+              <Card
+                variant="outlined"
+                sx={{ p: 1.5, mb: 2, bgcolor: "action.hover" }}
+              >
+                <Grid container spacing={0.5}>
+                  {(mfaSetup.backupCodes || []).map((code) => (
+                    <Grid key={code} size={{ xs: 6 }}>
+                      <Typography variant="body2" fontFamily="monospace">
+                        {code}
+                      </Typography>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Card>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                sx={{ mb: 2 }}
+              >
+                Store these somewhere safe. Each code can be used once if you
+                lose access to your authenticator app.
+              </Typography>
+
+              <Typography variant="subtitle2" gutterBottom>
+                3. Enter the 6-digit code to confirm
+              </Typography>
+              <form onSubmit={handleVerifyMfa}>
+                <Stack direction="row" spacing={2}>
+                  <TextField
+                    size="small"
+                    placeholder="000000"
+                    value={mfaToken}
+                    onChange={(e) => setMfaToken(e.target.value)}
+                    inputProps={{ maxLength: 6 }}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={mfaLoading || mfaToken.length < 6}
+                  >
+                    {mfaLoading ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      "Verify and Enable"
+                    )}
+                  </Button>
+                </Stack>
+              </form>
+            </Grid>
+          </Grid>
+        ) : (
+          <Button
+            variant="outlined"
+            onClick={handleStartMfaSetup}
+            disabled={mfaLoading}
+          >
+            {mfaLoading ? (
+              <CircularProgress size={20} />
+            ) : (
+              "Set Up Two-Factor Authentication"
+            )}
+          </Button>
+        )}
       </Paper>
 
       <Paper sx={{ p: 3 }}>

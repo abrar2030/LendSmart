@@ -405,28 +405,40 @@ userSchema.post(["find", "findOne", "findOneAndUpdate"], async function (docs) {
   const documents = Array.isArray(docs) ? docs : [docs];
   const encryptionService = getEncryptionService();
 
+  // Decrypt a single field in isolation: if it fails (e.g. because the
+  // data was encrypted with a since-rotated key), the field is set to null
+  // instead of leaving the raw ciphertext in place. Previously all fields
+  // for a document shared one try/catch, so a single bad field aborted
+  // decryption of every other field on that document too, and the failed
+  // field's ciphertext was returned to the client as-is.
+  const decryptField = async (value) => {
+    if (!value) return value;
+    try {
+      return await encryptionService.decrypt(value);
+    } catch (error) {
+      logger.error("Decryption error:", { error: error.message });
+      return null;
+    }
+  };
+
   for (const doc of documents) {
     if (doc && typeof doc.toObject === "function") {
-      try {
-        if (doc.firstName) {
-          doc.firstName = await encryptionService.decrypt(doc.firstName);
-        }
-        if (doc.lastName) {
-          doc.lastName = await encryptionService.decrypt(doc.lastName);
-        }
-        if (doc.phoneNumber) {
-          doc.phoneNumber = await encryptionService.decrypt(doc.phoneNumber);
-        }
-        if (doc.socialSecurityNumber) {
-          doc.socialSecurityNumber = await encryptionService.decrypt(
-            doc.socialSecurityNumber,
-          );
-        }
-        if (doc.income && typeof doc.income === "string") {
-          doc.income = parseFloat(await encryptionService.decrypt(doc.income));
-        }
-      } catch (error) {
-        logger.error("Decryption error:", { error: error.message });
+      if (doc.firstName) {
+        doc.firstName = await decryptField(doc.firstName);
+      }
+      if (doc.lastName) {
+        doc.lastName = await decryptField(doc.lastName);
+      }
+      if (doc.phoneNumber) {
+        doc.phoneNumber = await decryptField(doc.phoneNumber);
+      }
+      if (doc.socialSecurityNumber) {
+        doc.socialSecurityNumber = await decryptField(doc.socialSecurityNumber);
+      }
+      if (doc.income && typeof doc.income === "string") {
+        const decryptedIncome = await decryptField(doc.income);
+        doc.income =
+          decryptedIncome !== null ? parseFloat(decryptedIncome) : null;
       }
     }
   }

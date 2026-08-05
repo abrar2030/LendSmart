@@ -54,6 +54,8 @@ const Header = () => {
   const settings = [
     { title: "Dashboard", path: "/dashboard" },
     { title: "Profile", path: "/profile" },
+    { title: "Settings", path: "/settings" },
+    { title: "Admin", path: "/admin", role: "admin" },
   ];
 
   const canSee = (page) => {
@@ -198,7 +200,7 @@ const Header = () => {
                   open={Boolean(anchorElUser)}
                   onClose={handleCloseUserMenu}
                 >
-                  {settings.map((setting) => (
+                  {settings.filter(canSee).map((setting) => (
                     <MenuItem
                       key={setting.title}
                       onClick={handleCloseUserMenu}

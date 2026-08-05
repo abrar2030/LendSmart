@@ -24,6 +24,7 @@ const ApplyForLoan = () => {
     isConnected,
     connectWallet,
     isLoading: blockchainLoading,
+    isInitializing,
     error: blockchainError,
   } = useBlockchain();
 
@@ -38,7 +39,6 @@ const ApplyForLoan = () => {
     collateralAmount: "",
     decimals: 18,
     collateralDecimals: 18,
-    privateKey: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -69,8 +69,17 @@ const ApplyForLoan = () => {
       setLoading(true);
       setError(null);
 
+      // The smart contract expects duration in seconds and the interest
+      // rate scaled by 100 (e.g. 5% -> 500), while the form collects the
+      // more human-friendly "days" and "percent" values.
+      const contractPayload = {
+        ...formData,
+        duration: Math.round(parseFloat(formData.duration) * 24 * 60 * 60),
+        interestRate: Math.round(parseFloat(formData.interestRate) * 100),
+      };
+
       // First submit to blockchain
-      const blockchainResult = await requestLoan(formData);
+      const blockchainResult = await requestLoan(contractPayload);
 
       if (!blockchainResult) {
         throw new Error("Failed to submit loan request to blockchain");
@@ -278,18 +287,15 @@ const ApplyForLoan = () => {
               </>
             )}
 
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                label="Private Key (for blockchain transaction)"
-                name="privateKey"
-                type="password"
-                value={formData.privateKey}
-                onChange={handleChange}
-                fullWidth
-                required
-                helperText="Your private key is only used for this transaction and not stored"
-              />
-            </Grid>
+            {!isConnected && !isInitializing && (
+              <Grid size={{ xs: 12 }}>
+                <Alert severity="info">
+                  You will be asked to connect your wallet (e.g. MetaMask) when
+                  you submit. Transactions are always signed in your wallet -
+                  LendSmart never asks for your private key.
+                </Alert>
+              </Grid>
+            )}
 
             <Grid size={{ xs: 12 }}>
               <Button
@@ -298,7 +304,7 @@ const ApplyForLoan = () => {
                 color="primary"
                 fullWidth
                 size="large"
-                disabled={loading || blockchainLoading}
+                disabled={loading || blockchainLoading || isInitializing}
               >
                 {loading || blockchainLoading ? (
                   <CircularProgress size={24} color="inherit" />

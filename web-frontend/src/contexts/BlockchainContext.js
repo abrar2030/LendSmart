@@ -5,8 +5,10 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { useLocation } from "react-router-dom";
 import LendSmartLoanABI from "../utils/LendSmartLoanABI.json";
 
 // Create blockchain context
@@ -22,7 +24,21 @@ export const BlockchainProvider = ({ children }) => {
   const [lendSmartLoanContract, setLendSmartLoanContract] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState(null);
+  const location = useLocation();
+
+  // Clear stale errors on navigation. Without this, an error from an
+  // earlier action on a different page (e.g. clicking "Connect Wallet" on
+  // the dashboard before the provider finished initializing) stayed in
+  // this shared context forever and silently reappeared as an unrelated
+  // looking error banner on whatever page the user navigated to next -
+  // this is exactly how "Provider not initialized" showed up on the Apply
+  // for Loan page without the user doing anything there.
+  useEffect(() => {
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   // Contract addresses - should be environment variables in production
   const LEND_SMART_LOAN_ADDRESS =
@@ -57,63 +73,87 @@ export const BlockchainProvider = ({ children }) => {
     [provider, LEND_SMART_LOAN_ADDRESS],
   );
 
-  // Initialize provider
-  useEffect(() => {
-    const initProvider = async () => {
-      try {
-        // Check if window.ethereum is available
-        if (window.ethereum) {
-          const web3Provider = new ethers.BrowserProvider(window.ethereum);
-          setProvider(web3Provider);
+  // Mirrors `provider`/`lendSmartLoanContract` synchronously so connectWallet
+  // (and anything else called right after setup) never reads a stale null
+  // value due to React state updates not having flushed yet - the same
+  // class of race that could previously cause "Provider not initialized"
+  // even when a wallet extension was installed and reachable.
+  const providerRef = useRef(null);
+  const contractRef = useRef(null);
 
-          // Get network information
-          const network = await web3Provider.getNetwork();
-          setChainId(network.chainId);
+  // Set up (or reuse) the ethers provider + read-only contract instance.
+  // Safe to call multiple times - if a provider already exists it's
+  // reused rather than recreated.
+  const setupProvider = useCallback(async () => {
+    if (providerRef.current) {
+      return { provider: providerRef.current, contract: contractRef.current };
+    }
 
-          // Initialize contract
-          const contract = new ethers.Contract(
-            LEND_SMART_LOAN_ADDRESS,
-            LendSmartLoanABI.abi,
-            web3Provider,
-          );
-          setLendSmartLoanContract(contract);
-
-          // Listen for account changes
-          window.ethereum.on("accountsChanged", handleAccountsChanged);
-
-          // Listen for chain changes
-          window.ethereum.on("chainChanged", handleChainChanged);
-
-          return () => {
-            window.ethereum.removeListener(
-              "accountsChanged",
-              handleAccountsChanged,
-            );
-            window.ethereum.removeListener("chainChanged", handleChainChanged);
-          };
-        } else {
-          setError("Please install MetaMask or another Ethereum wallet");
-        }
-      } catch (err) {
-        console.error("Error initializing provider:", err);
-        setError("Failed to initialize blockchain connection");
-      }
-    };
-
-    initProvider();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [LEND_SMART_LOAN_ADDRESS, handleAccountsChanged, handleChainChanged]);
-
-  // Connect wallet
-  const connectWallet = useCallback(async () => {
-    if (!provider) {
-      setError("Provider not initialized");
-      return;
+    if (!window.ethereum) {
+      setError("Please install MetaMask or another Ethereum wallet");
+      return { provider: null, contract: null };
     }
 
     try {
+      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      const network = await web3Provider.getNetwork();
+      const contract = new ethers.Contract(
+        LEND_SMART_LOAN_ADDRESS,
+        LendSmartLoanABI.abi,
+        web3Provider,
+      );
+
+      providerRef.current = web3Provider;
+      contractRef.current = contract;
+      setProvider(web3Provider);
+      setChainId(network.chainId);
+      setLendSmartLoanContract(contract);
+
+      return { provider: web3Provider, contract };
+    } catch (err) {
+      console.error("Error initializing provider:", err);
+      setError("Failed to initialize blockchain connection");
+      return { provider: null, contract: null };
+    }
+  }, [LEND_SMART_LOAN_ADDRESS]);
+
+  // Initialize provider on mount
+  useEffect(() => {
+    if (!window.ethereum) {
+      setIsInitializing(false);
+      return undefined;
+    }
+
+    setupProvider().finally(() => setIsInitializing(false));
+
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
+
+    return () => {
+      window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum.removeListener("chainChanged", handleChainChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleAccountsChanged, handleChainChanged, setupProvider]);
+
+  // Connect wallet
+  const connectWallet = useCallback(async () => {
+    try {
       setIsLoading(true);
       setError(null);
+
+      // Lazily finish provider setup if it hasn't completed yet, instead
+      // of failing outright - this is what used to produce a spurious
+      // "Provider not initialized" error when the user clicked Connect
+      // Wallet before the mount-time initialization had resolved.
+      const { provider: activeProvider, contract: activeContract } =
+        await setupProvider();
+
+      if (!activeProvider || !activeContract) {
+        setError((current) => current || "Please install a wallet to connect");
+        setIsLoading(false);
+        return;
+      }
 
       // Request account access
       const accounts = await window.ethereum.request({
@@ -123,11 +163,12 @@ export const BlockchainProvider = ({ children }) => {
       setAccount(connectedAccount);
 
       // Get signer
-      const newSigner = await provider.getSigner();
+      const newSigner = await activeProvider.getSigner();
       setSigner(newSigner);
 
       // Connect contract with signer
-      const contractWithSigner = lendSmartLoanContract.connect(newSigner);
+      const contractWithSigner = activeContract.connect(newSigner);
+      contractRef.current = contractWithSigner;
       setLendSmartLoanContract(contractWithSigner);
 
       setIsConnected(true);
@@ -137,7 +178,7 @@ export const BlockchainProvider = ({ children }) => {
       setError("Failed to connect wallet");
       setIsLoading(false);
     }
-  }, [provider, lendSmartLoanContract]);
+  }, [setupProvider]);
 
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
@@ -617,6 +658,7 @@ export const BlockchainProvider = ({ children }) => {
       lendSmartLoanContract,
       isConnected,
       isLoading,
+      isInitializing,
       error,
       connectWallet,
       disconnectWallet,
@@ -641,6 +683,7 @@ export const BlockchainProvider = ({ children }) => {
       lendSmartLoanContract,
       isConnected,
       isLoading,
+      isInitializing,
       error,
       connectWallet,
       disconnectWallet,

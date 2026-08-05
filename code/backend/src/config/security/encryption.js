@@ -1,4 +1,6 @@
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const { promisify } = require("util");
 
 /**
@@ -14,16 +16,79 @@ class EncryptionService {
     this.tagLength = 16; // 128 bits
     this.iterations = 100000; // PBKDF2 iterations
 
-    // Master key from environment (should be 64 hex characters)
-    this.masterKey =
-      process.env.ENCRYPTION_MASTER_KEY ||
-      process.env.ENCRYPTION_KEY ||
-      crypto.randomBytes(32).toString("hex");
-    if (this.masterKey.length < 32) {
-      console.warn(
-        "ENCRYPTION_MASTER_KEY not properly set, using default (NOT SECURE FOR PRODUCTION)",
+    this.masterKey = this.resolveMasterKey();
+  }
+
+  /**
+   * Resolve the master key used to derive per-record encryption keys.
+   *
+   * IMPORTANT: this key must stay stable for the lifetime of any data it
+   * encrypts. Previously, whenever ENCRYPTION_MASTER_KEY/ENCRYPTION_KEY was
+   * missing or too short, a brand new random key was generated on every
+   * process start. Because encrypted fields (name, phone, SSN, income) are
+   * persisted to the database, that meant every server restart silently
+   * orphaned all previously-encrypted data - decrypting it afterwards
+   * would always fail with "Unsupported state or unable to authenticate
+   * data", and the raw ciphertext would leak through to API responses.
+   *
+   * In production this now fails fast instead of failing silently. In
+   * development, a generated key is persisted to a local (gitignored) file
+   * so it survives restarts.
+   */
+  resolveMasterKey() {
+    const configuredKey =
+      process.env.ENCRYPTION_MASTER_KEY || process.env.ENCRYPTION_KEY;
+
+    if (configuredKey && configuredKey.length >= 32) {
+      return configuredKey;
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "ENCRYPTION_MASTER_KEY (or ENCRYPTION_KEY) must be set to a value " +
+          "at least 32 characters long in production. Refusing to start " +
+          "with a randomly generated key, since that would make previously " +
+          "encrypted data permanently unreadable after every restart.",
       );
-      this.masterKey = crypto.randomBytes(32).toString("hex");
+    }
+
+    // Development/test fallback: persist a generated key locally so it
+    // survives restarts instead of rotating (and breaking decryption)
+    // every time the server is started.
+    const devKeyPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      ".dev-encryption-key",
+    );
+
+    try {
+      if (fs.existsSync(devKeyPath)) {
+        const existingKey = fs.readFileSync(devKeyPath, "utf8").trim();
+        if (existingKey.length >= 32) {
+          return existingKey;
+        }
+      }
+
+      const generatedKey = crypto.randomBytes(32).toString("hex");
+      fs.writeFileSync(devKeyPath, generatedKey, { mode: 0o600 });
+      console.warn(
+        `ENCRYPTION_MASTER_KEY not set - generated a development key and ` +
+          `saved it to ${devKeyPath} so it persists across restarts. Set ` +
+          `ENCRYPTION_MASTER_KEY explicitly before deploying to production.`,
+      );
+      return generatedKey;
+    } catch (fsError) {
+      // Filesystem might be read-only (e.g. some CI environments). Fall
+      // back to an in-memory-only key and warn loudly, matching the old
+      // behavior but at least explaining the consequence.
+      console.warn(
+        `Could not persist a development encryption key (${fsError.message}). ` +
+          `Using an in-memory key for this process only - any data encrypted ` +
+          `now will be unreadable after the next restart.`,
+      );
+      return crypto.randomBytes(32).toString("hex");
     }
   }
 

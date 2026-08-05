@@ -564,6 +564,225 @@ export const ApiProvider = ({ children }) => {
     [API_URL],
   );
 
+  // Set up MFA: returns a QR code and backup codes to show the user
+  const setupMFA = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(`${API_URL}/auth/setup-mfa`);
+
+      setLoading(false);
+      return res.data;
+    } catch (err) {
+      console.error("Error setting up MFA:", err);
+      setError(err.response?.data?.message || "Failed to set up MFA");
+      setLoading(false);
+      throw err;
+    }
+  }, [API_URL]);
+
+  // Verify the authenticator token and enable MFA
+  const verifyMFA = useCallback(
+    async (token) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await axios.post(`${API_URL}/auth/verify-mfa`, { token });
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error verifying MFA:", err);
+        setError(err.response?.data?.message || "Failed to verify MFA code");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  // --- Admin API ---
+  // These call the real /api/admin/* endpoints (users, loans, analytics,
+  // metrics, audit export). They were fully implemented on the backend but
+  // had no corresponding frontend calls anywhere in the app.
+
+  const getAdminUsers = useCallback(
+    async (filters = {}) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const queryParams = new URLSearchParams(filters).toString();
+        const res = await axios.get(
+          `${API_URL}/admin/users${queryParams ? `?${queryParams}` : ""}`,
+        );
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error fetching admin users:", err);
+        setError(err.response?.data?.message || "Failed to fetch users");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const updateAdminUserStatus = useCallback(
+    async (id, status, reason) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await axios.put(`${API_URL}/admin/users/${id}/status`, {
+          status,
+          reason,
+        });
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error updating user status:", err);
+        setError(err.response?.data?.message || "Failed to update user status");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const deleteAdminUser = useCallback(
+    async (id) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await axios.delete(`${API_URL}/admin/users/${id}`);
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error deleting user:", err);
+        setError(err.response?.data?.message || "Failed to delete user");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const getAdminLoans = useCallback(
+    async (filters = {}) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const queryParams = new URLSearchParams(filters).toString();
+        const res = await axios.get(
+          `${API_URL}/admin/loans${queryParams ? `?${queryParams}` : ""}`,
+        );
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error fetching admin loans:", err);
+        setError(err.response?.data?.message || "Failed to fetch loans");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const updateAdminLoanStatus = useCallback(
+    async (id, status, reason) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await axios.put(`${API_URL}/admin/loans/${id}/status`, {
+          status,
+          reason,
+        });
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error updating loan status:", err);
+        setError(err.response?.data?.message || "Failed to update loan status");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const getSystemAnalytics = useCallback(
+    async (params = {}) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const queryParams = new URLSearchParams(params).toString();
+        const res = await axios.get(
+          `${API_URL}/admin/analytics${queryParams ? `?${queryParams}` : ""}`,
+        );
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error fetching system analytics:", err);
+        setError(err.response?.data?.message || "Failed to fetch analytics");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
+  const getSystemMetrics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.get(`${API_URL}/admin/metrics`);
+
+      setLoading(false);
+      return res.data;
+    } catch (err) {
+      console.error("Error fetching system metrics:", err);
+      setError(err.response?.data?.message || "Failed to fetch metrics");
+      setLoading(false);
+      throw err;
+    }
+  }, [API_URL]);
+
+  const exportAuditLogs = useCallback(
+    async (params = {}) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await axios.post(
+          `${API_URL}/admin/audit-logs/export`,
+          params,
+        );
+
+        setLoading(false);
+        return res.data;
+      } catch (err) {
+        console.error("Error exporting audit logs:", err);
+        setError(err.response?.data?.message || "Failed to export audit logs");
+        setLoading(false);
+        throw err;
+      }
+    },
+    [API_URL],
+  );
+
   // Context value. Memoized so consumers that depend on the whole context
   // object (rather than a single destructured function) don't re-render or
   // re-fire effects on every unrelated state change either.
@@ -579,6 +798,8 @@ export const ApiProvider = ({ children }) => {
       logout,
       updateProfile,
       updatePassword,
+      setupMFA,
+      verifyMFA,
       getLoans,
       getMyLoans,
       getLoan,
@@ -592,6 +813,14 @@ export const ApiProvider = ({ children }) => {
       setRiskScore,
       markAsDefaulted,
       getReputationScore,
+      getAdminUsers,
+      updateAdminUserStatus,
+      deleteAdminUser,
+      getAdminLoans,
+      updateAdminLoanStatus,
+      getSystemAnalytics,
+      getSystemMetrics,
+      exportAuditLogs,
     }),
     [
       isAuthenticated,
@@ -604,6 +833,8 @@ export const ApiProvider = ({ children }) => {
       logout,
       updateProfile,
       updatePassword,
+      setupMFA,
+      verifyMFA,
       getLoans,
       getMyLoans,
       getLoan,
@@ -617,6 +848,14 @@ export const ApiProvider = ({ children }) => {
       setRiskScore,
       markAsDefaulted,
       getReputationScore,
+      getAdminUsers,
+      updateAdminUserStatus,
+      deleteAdminUser,
+      getAdminLoans,
+      updateAdminLoanStatus,
+      getSystemAnalytics,
+      getSystemMetrics,
+      exportAuditLogs,
     ],
   );
 

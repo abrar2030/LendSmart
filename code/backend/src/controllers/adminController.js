@@ -119,12 +119,8 @@ exports.updateUserStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  const oldStatus = user.status;
-  user.status = status;
-
-  if (reason) {
-    user.statusReason = reason;
-  }
+  const oldStatus = user.accountStatus;
+  user.accountStatus = status;
 
   await user.save();
 
@@ -200,7 +196,7 @@ exports.getAllLoans = asyncHandler(async (req, res) => {
   const query = {};
 
   if (status) {
-    query.accountStatus = status;
+    query.status = status;
   }
 
   if (minAmount) {
@@ -352,7 +348,7 @@ exports.getSystemAnalytics = asyncHandler(async (req, res) => {
 
   // Get loan statistics
   const totalLoans = await Loan.countDocuments();
-  const activeLoans = await Loan.countDocuments({ accountStatus: "active" });
+  const activeLoans = await Loan.countDocuments({ status: "active" });
   const completedLoans = await Loan.countDocuments({ status: "repaid" });
 
   // Calculate total loan amount

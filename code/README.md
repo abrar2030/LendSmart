@@ -5,7 +5,7 @@ An enterprise-grade peer-to-peer lending platform combining a Node.js REST API, 
 ## Repository Structure
 
 ```
-LendSmart/
+code/
 ├── backend/            # Node.js / Express REST API
 ├── blockchain/         # Solidity smart contracts (Hardhat + Truffle)
 ├── ml_services/        # Python ML models & compliance framework
@@ -26,8 +26,8 @@ LendSmart/
 ### 1 – Clone & configure
 
 ```bash
-git clone https://github.com/your-org/lendsmart.git
-cd lendsmart/code
+git clone https://github.com/quantsingularity/LendSmart
+cd LendSmart/code
 cp backend/.env.example backend/.env
 ```
 
@@ -175,9 +175,3 @@ pytest ml_services/credit_risk/tests/ -v
 # Smart Contracts
 cd blockchain && npx hardhat test
 ```
-
----
-
-## License
-
-MIT

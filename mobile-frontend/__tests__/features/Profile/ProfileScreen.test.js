@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
-import { DefaultTheme, PaperProvider } from "react-native-paper";
+import { PaperProvider } from "react-native-paper";
 import { CombinedLightTheme } from "../../../src/theme/theme";
 import { AuthContext } from "../../../src/contexts/AuthContext";
 import { ThemeContext } from "../../../src/contexts/ThemeContext";
@@ -58,7 +58,7 @@ describe("ProfileScreen", () => {
   });
 
   it("renders correctly with user information and settings", () => {
-    const { getByText, getByLabelText } = render(<ProfileScreen />, {
+    const { getByText } = render(<ProfileScreen />, {
       wrapper: AllTheProviders,
     });
 

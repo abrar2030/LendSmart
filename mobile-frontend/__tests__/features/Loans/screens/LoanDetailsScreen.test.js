@@ -103,7 +103,7 @@ describe("LoanDetailsScreen", () => {
   });
 
   it("renders loading state initially then loan details", async () => {
-    const { getByTestId, findByText, queryByTestId } = render(
+    const { findByText, queryByTestId } = render(
       <LoanDetailsScreen route={mockRoute("1")} navigation={mockNavigation} />,
       { wrapper: AllTheProviders },
     );

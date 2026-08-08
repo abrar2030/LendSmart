@@ -170,7 +170,9 @@ const DashboardScreen = ({ navigation }) => {
         <Text style={styles.greeting}>
           Hello, {user?.name?.split(" ")[0] || "User"}!
         </Text>
-        <Text style={styles.subGreeting}>Here's your financial overview</Text>
+        <Text style={styles.subGreeting}>
+          Here&apos;s your financial overview
+        </Text>
       </View>
 
       {/* Loan Summary Card */}

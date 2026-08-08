@@ -69,12 +69,6 @@ export const ThemeProvider = ({ children }) => {
     [isDark],
   );
 
-  // Toggle between light and dark mode
-  const toggleTheme = useCallback(() => {
-    const newThemeMode = isDark ? THEME_MODES.LIGHT : THEME_MODES.DARK;
-    setThemeMode(newThemeMode);
-  }, [isDark, setThemeMode]);
-
   // Set theme mode and persist to storage
   const setThemeMode = useCallback(async (mode) => {
     if (!Object.values(THEME_MODES).includes(mode)) {
@@ -89,6 +83,12 @@ export const ThemeProvider = ({ children }) => {
       console.error("Failed to save theme preference:", error);
     }
   }, []);
+
+  // Toggle between light and dark mode
+  const toggleTheme = useCallback(() => {
+    const newThemeMode = isDark ? THEME_MODES.LIGHT : THEME_MODES.DARK;
+    setThemeMode(newThemeMode);
+  }, [isDark, setThemeMode]);
 
   // Extract colors and fonts for easier access
   const { colors, fonts } = theme;

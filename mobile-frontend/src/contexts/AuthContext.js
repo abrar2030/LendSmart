@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import * as Keychain from "react-native-keychain";
@@ -42,6 +43,193 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
+
+  // NOTE ON FUNCTION ORDERING BELOW
+  //
+  // clearAuthData, refreshTokenHandler, verifyToken and checkAuthStatus are
+  // all referenced inside useEffect/useCallback dependency arrays further
+  // down (and, in checkAuthStatus's case, in the very first effect in this
+  // file). Dependency arrays are plain expressions evaluated immediately
+  // when useEffect/useCallback is called during render - unlike function
+  // declarations, `const` bindings are not hoisted, so referencing one of
+  // these before its own declaration line throws "Cannot access '<name>'
+  // before initialization" on every single render. That was happening here
+  // previously (checkAuthStatus was defined near the bottom of the file but
+  // used in the effect near the top), which meant this provider - and so
+  // the whole app - crashed unconditionally on mount.
+  //
+  // Below, every function used in a dependency array is now declared
+  // before the array that references it. storeAuthData and
+  // refreshTokenHandler call each other, so a strict "callee before
+  // caller" order isn't possible for that pair; storeAuthDataRef breaks
+  // that cycle without either function needing to close over a stale
+  // version of the other.
+
+  const storeAuthDataRef = useRef(null);
+
+  // Clear all auth data
+  const clearAuthData = useCallback(async () => {
+    try {
+      await Keychain.resetGenericPassword({ service: AUTH_KEY });
+      await AsyncStorage.removeItem(TOKEN_EXPIRY_KEY);
+      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+      apiService.clearAuthToken();
+    } catch (err) {
+      console.error("Failed to clear auth data:", err);
+    }
+  }, []);
+
+  // Refresh token handler
+  const refreshTokenHandler = useCallback(
+    async (currentRefreshToken) => {
+      if (!currentRefreshToken || !isConnected) {
+        throw new Error("No refresh token available or no network connection");
+      }
+
+      try {
+        const response = await apiService.post("/auth/refresh", {
+          refreshToken: currentRefreshToken,
+        });
+        const {
+          accessToken: newToken,
+          refreshToken: newRefreshToken,
+          expiresIn,
+          user: userData,
+        } = response.data.data || {};
+
+        if (newToken) {
+          setToken(newToken);
+
+          if (userData) {
+            setUser(userData);
+          }
+
+          if (storeAuthDataRef.current) {
+            await storeAuthDataRef.current(
+              newToken,
+              userData || user,
+              newRefreshToken,
+              expiresIn,
+            );
+          }
+          return newToken;
+        } else {
+          throw new Error("Invalid refresh response");
+        }
+      } catch (err) {
+        console.error("Token refresh failed:", err);
+        await clearAuthData();
+        setUser(null);
+        setToken(null);
+        setRefreshToken(null);
+        throw err;
+      }
+    },
+    [isConnected, clearAuthData, user],
+  );
+
+  // Store auth data securely
+  const storeAuthData = useCallback(
+    async (newToken, userData, newRefreshToken, expiresIn) => {
+      try {
+        const dataToStore = JSON.stringify({
+          token: newToken,
+          user: userData,
+        });
+        await Keychain.setGenericPassword("user", dataToStore, {
+          service: AUTH_KEY,
+        });
+
+        // Calculate and store token expiry
+        const expiryTime = Date.now() + expiresIn * 1000;
+        await AsyncStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+        setTokenExpiry(expiryTime);
+
+        // Store refresh token
+        if (newRefreshToken) {
+          await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+          setRefreshToken(newRefreshToken);
+        }
+
+        // Set token for API service
+        apiService.setAuthToken(newToken);
+
+        // Schedule token refresh before expiry
+        if (expiresIn) {
+          const timeToRefresh = expiresIn * 1000 - 60000; // Refresh 1 minute before expiry
+          if (timeToRefresh > 0) {
+            setTimeout(() => {
+              refreshTokenHandler(newRefreshToken);
+            }, timeToRefresh);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to store auth data:", err);
+        setError("Failed to save session data.");
+      }
+    },
+    [refreshTokenHandler],
+  );
+
+  // Keep the ref pointed at the latest storeAuthData so refreshTokenHandler
+  // (declared above it) can call the current version without needing it in
+  // its own dependency array.
+  useEffect(() => {
+    storeAuthDataRef.current = storeAuthData;
+  }, [storeAuthData]);
+
+  // Verify token with backend
+  const verifyToken = useCallback(
+    async (authToken) => {
+      if (!authToken || !isConnected) return false;
+
+      try {
+        await apiService.get("/auth/me");
+        return true;
+      } catch (err) {
+        console.error("Token verification failed:", err);
+
+        // If token is invalid, try to refresh
+        if (refreshToken) {
+          try {
+            await refreshTokenHandler(refreshToken);
+            return true;
+          } catch (refreshError) {
+            console.error(
+              "Failed to refresh token during verification:",
+              refreshError,
+            );
+            await clearAuthData();
+            setUser(null);
+            setToken(null);
+            return false;
+          }
+        } else {
+          await clearAuthData();
+          setUser(null);
+          setToken(null);
+          return false;
+        }
+      }
+    },
+    [isConnected, refreshToken, refreshTokenHandler, clearAuthData],
+  );
+
+  // Check authentication status
+  const checkAuthStatus = useCallback(async () => {
+    if (!token || !isConnected) return false;
+
+    setIsLoading(true);
+    try {
+      const isValid = await verifyToken(token);
+      return isValid;
+    } catch (err) {
+      console.error("Auth status check failed:", err);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, isConnected, verifyToken]);
 
   // Monitor network connectivity
   useEffect(() => {
@@ -142,143 +330,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadAuthData();
-  }, [
-    clearAuthData,
-    refreshTokenHandler, // Verify token with backend
-    verifyToken,
-  ]);
-
-  // Verify token with backend
-  const verifyToken = async (authToken) => {
-    if (!authToken || !isConnected) return false;
-
-    try {
-      const _response = await apiService.get("/auth/verify");
-      return true;
-    } catch (err) {
-      console.error("Token verification failed:", err);
-
-      // If token is invalid, try to refresh
-      if (refreshToken) {
-        try {
-          await refreshTokenHandler(refreshToken);
-          return true;
-        } catch (refreshError) {
-          console.error(
-            "Failed to refresh token during verification:",
-            refreshError,
-          );
-          await clearAuthData();
-          setUser(null);
-          setToken(null);
-          return false;
-        }
-      } else {
-        await clearAuthData();
-        setUser(null);
-        setToken(null);
-        return false;
-      }
-    }
-  };
-
-  // Store auth data securely
-  const storeAuthData = async (
-    newToken,
-    userData,
-    newRefreshToken,
-    expiresIn,
-  ) => {
-    try {
-      const dataToStore = JSON.stringify({ token: newToken, user: userData });
-      await Keychain.setGenericPassword("user", dataToStore, {
-        service: AUTH_KEY,
-      });
-
-      // Calculate and store token expiry
-      const expiryTime = Date.now() + expiresIn * 1000;
-      await AsyncStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
-      setTokenExpiry(expiryTime);
-
-      // Store refresh token
-      if (newRefreshToken) {
-        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
-        setRefreshToken(newRefreshToken);
-      }
-
-      // Set token for API service
-      apiService.setAuthToken(newToken);
-
-      // Schedule token refresh before expiry
-      if (expiresIn) {
-        const timeToRefresh = expiresIn * 1000 - 60000; // Refresh 1 minute before expiry
-        if (timeToRefresh > 0) {
-          setTimeout(() => {
-            refreshTokenHandler(newRefreshToken);
-          }, timeToRefresh);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to store auth data:", err);
-      setError("Failed to save session data.");
-    }
-  };
-
-  // Clear all auth data
-  const clearAuthData = async () => {
-    try {
-      await Keychain.resetGenericPassword({ service: AUTH_KEY });
-      await AsyncStorage.removeItem(TOKEN_EXPIRY_KEY);
-      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
-      apiService.clearAuthToken();
-    } catch (err) {
-      console.error("Failed to clear auth data:", err);
-    }
-  };
-
-  // Refresh token handler
-  const refreshTokenHandler = async (currentRefreshToken) => {
-    if (!currentRefreshToken || !isConnected) {
-      throw new Error("No refresh token available or no network connection");
-    }
-
-    try {
-      const response = await apiService.post("/auth/refresh", {
-        refreshToken: currentRefreshToken,
-      });
-      const {
-        accessToken: newToken,
-        refreshToken: newRefreshToken,
-        expiresIn,
-        user: userData,
-      } = response.data.data || {};
-
-      if (newToken) {
-        setToken(newToken);
-
-        if (userData) {
-          setUser(userData);
-        }
-
-        await storeAuthData(
-          newToken,
-          userData || user,
-          newRefreshToken,
-          expiresIn,
-        );
-        return newToken;
-      } else {
-        throw new Error("Invalid refresh response");
-      }
-    } catch (err) {
-      console.error("Token refresh failed:", err);
-      await clearAuthData();
-      setUser(null);
-      setToken(null);
-      setRefreshToken(null);
-      throw err;
-    }
-  };
+  }, [clearAuthData, refreshTokenHandler, verifyToken]);
 
   // Login handler
   const login = useCallback(
@@ -407,7 +459,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
 
       try {
-        const response = await apiService.put("/users/profile", userData);
+        const response = await apiService.put("/auth/updatedetails", userData);
         const updatedUser = response.data;
 
         // Update local user data
@@ -549,22 +601,6 @@ export const AuthProvider = ({ children }) => {
   const clearError = useCallback(() => {
     setError(null);
   }, []);
-
-  // Check authentication status
-  const checkAuthStatus = useCallback(async () => {
-    if (!token || !isConnected) return false;
-
-    setIsLoading(true);
-    try {
-      const isValid = await verifyToken(token);
-      return isValid;
-    } catch (err) {
-      console.error("Auth status check failed:", err);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, isConnected, verifyToken]);
 
   // Toggle biometric authentication
   const toggleBiometric = useCallback(async (enabled) => {

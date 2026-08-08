@@ -28,7 +28,7 @@ const MarketplaceNavigator = () => {
       <Stack.Screen
         name="LoanDetails"
         component={LoanDetailsScreen}
-        options={({ route }) => ({
+        options={({ route: _route }) => ({
           title: `Loan Details`, // Title can be dynamic if needed
           // Example: title: `Loan #${route.params?.loanId}`
         })}

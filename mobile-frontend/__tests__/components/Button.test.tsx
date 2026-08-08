@@ -42,7 +42,7 @@ describe("Button Component", () => {
   });
 
   it("shows loading indicator when loading prop is true", () => {
-    const { getByTestId } = render(
+    render(
       <Button onPress={() => {}} loading>
         Loading Button
       </Button>,

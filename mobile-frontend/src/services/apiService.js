@@ -81,7 +81,7 @@ export const loginUser = (credentials) =>
   mobileApiService.post("/auth/login", credentials);
 export const getUserProfile = () => mobileApiService.get("/auth/me");
 export const updateUserProfile = (profileData) =>
-  mobileApiService.put("/auth/profile", profileData);
+  mobileApiService.put("/auth/updatedetails", profileData);
 
 // --- Loan Service Calls ---
 export const applyLoan = (loanData) =>
@@ -111,13 +111,5 @@ mobileApiService.setAuthToken = (token) => {
 mobileApiService.clearAuthToken = () => {
   delete mobileApiService.defaults.headers.common.Authorization;
 };
-
-// Generic HTTP methods for direct use
-mobileApiService.get = (url, config) => mobileApiService.get(url, config);
-mobileApiService.post = (url, data, config) =>
-  mobileApiService.post(url, data, config);
-mobileApiService.put = (url, data, config) =>
-  mobileApiService.put(url, data, config);
-mobileApiService.delete = (url, config) => mobileApiService.delete(url, config);
 
 export default mobileApiService;

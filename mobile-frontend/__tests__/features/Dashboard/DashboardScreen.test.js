@@ -95,7 +95,7 @@ describe("DashboardScreen", () => {
 
   it("shows loading indicator if user is not available initially", () => {
     mockAuthContextValue.user = null; // Simulate user not yet loaded
-    const { getByTestId, queryByText } = render(
+    const { queryByText } = render(
       // DashboardScreen has an ActivityIndicator but it's not directly testable by role/text easily without testID
       // We will check that the main content is not rendered.
       <DashboardScreen navigation={mockNavigation} />,
@@ -126,7 +126,7 @@ describe("DashboardScreen", () => {
   });
 
   it("simulates refresh control and completes", async () => {
-    const { getByTestId, getByText } = render(
+    const { getByText } = render(
       <DashboardScreen navigation={mockNavigation} />,
       { wrapper: AllTheProviders },
     );

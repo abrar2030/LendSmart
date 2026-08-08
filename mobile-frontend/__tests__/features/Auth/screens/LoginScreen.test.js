@@ -124,10 +124,9 @@ describe("LoginScreen", () => {
 
   it("displays loading indicator when auth is loading", () => {
     mockAuthContextValue.loading = true;
-    const { getByText, getByTestId } = render(
-      <LoginScreen navigation={mockNavigation} />,
-      { wrapper: AllTheProviders },
-    );
+    const { getByText } = render(<LoginScreen navigation={mockNavigation} />, {
+      wrapper: AllTheProviders,
+    });
     // react-native-paper Button's loading prop shows an ActivityIndicator
     // We check if the button is disabled and shows loading state
     let node = getByText("Login");

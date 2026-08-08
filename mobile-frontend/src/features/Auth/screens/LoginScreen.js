@@ -119,7 +119,7 @@ const LoginScreen = ({ navigation }) => {
                   disabled={isSubmitting || loading}
                   labelStyle={styles.switchButtonLabel}
                 >
-                  Don't have an account? Register
+                  Don&apos;t have an account? Register
                 </Button>
               </View>
             )}

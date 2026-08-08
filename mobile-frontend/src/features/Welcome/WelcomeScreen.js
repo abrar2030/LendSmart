@@ -1,5 +1,4 @@
 import PropTypes from "prop-types";
-import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 

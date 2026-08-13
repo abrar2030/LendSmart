@@ -5,10 +5,14 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Alert } from "react-native";
+import { AuthContext } from "./AuthContext";
+import { updateUserProfile } from "../services/apiService";
 
 export const WalletContext = createContext({
   isConnected: false,
@@ -22,6 +26,8 @@ export const WalletContext = createContext({
 export const WalletProvider = ({ children }) => {
   const { open, isConnected, address, provider } = useWalletConnectModal();
   const [ethersProvider, setEthersProvider] = useState(null);
+  const { isAuthenticated } = useContext(AuthContext);
+  const lastSyncedAddressRef = useRef(null);
 
   // Wrap the WalletConnect provider with ethers.js when connected
   React.useEffect(() => {
@@ -34,6 +40,28 @@ export const WalletProvider = ({ children }) => {
       setEthersProvider(null);
     }
   }, [isConnected, provider, address]);
+
+  // Persist the connected wallet to the user's backend profile, so
+  // blockchainService.createLoanContract() has an address to attribute
+  // this user's loans to on-chain once they later fund or apply. Only
+  // runs for logged-in users, and only re-syncs when the address actually
+  // changes (not on every re-render).
+  useEffect(() => {
+    if (!isAuthenticated || !isConnected || !address) {
+      return;
+    }
+    if (lastSyncedAddressRef.current === address) {
+      return;
+    }
+    lastSyncedAddressRef.current = address;
+    updateUserProfile({ walletAddress: address }).catch((error) => {
+      console.error("Failed to sync connected wallet to profile:", error);
+      // Don't block wallet usage on this failing - the address is still
+      // usable for the current action (e.g. passed directly when funding a
+      // loan); it just won't be remembered for next time.
+      lastSyncedAddressRef.current = null;
+    });
+  }, [isAuthenticated, isConnected, address]);
 
   const connectWallet = useCallback(async () => {
     try {

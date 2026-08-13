@@ -45,7 +45,7 @@ const LoanApplicationScreen = ({ navigation }) => {
     }
 
     // Optional: Check wallet connection before proceeding
-    // if (!blockchainService.isConnected()) {
+    // if (!useWallet().isConnected) {
     //   Alert.alert('Wallet Not Connected', 'Please connect your wallet before applying.');
     //   setSubmitting(false);
     //   return;

@@ -1,0 +1,19 @@
+{
+  "name": "lendsmart-truffle-legacy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Legacy Truffle toolchain for LendSmart smart contracts (superseded by the Hardhat setup in ../). Kept for reference/compatibility.",
+  "scripts": {
+    "compile": "truffle compile",
+    "migrate": "truffle migrate --network development",
+    "test": "truffle test"
+  },
+  "dependencies": {
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "truffle": "^5.11.5"
+  }
+}

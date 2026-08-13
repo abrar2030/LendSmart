@@ -1,6 +1,7 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { DefaultTheme, PaperProvider } from "react-native-paper";
+import { LoanContext } from "../../../../src/contexts/LoanContext";
 import { WalletContext } from "../../../../src/contexts/WalletContext";
 import LoanDetailsScreen from "../../../../src/features/Loans/screens/LoanDetailsScreen";
 import { getLoanDetails } from "../../../../src/services/apiService";
@@ -25,6 +26,13 @@ const mockWalletContextValue = () => ({
   address: mockWalletAddress,
   connectWallet: mockConnectWallet,
   // Add other wallet context values if used
+});
+
+// Mock LoanContext's fundLoan (this is what actually submits the funding
+// request to the backend, which in turn anchors it on-chain)
+const mockFundLoan = jest.fn();
+const mockLoanContextValue = () => ({
+  fundLoan: mockFundLoan,
 });
 
 // Mock Alert
@@ -82,7 +90,9 @@ const placeholderLoans = [
 
 const AllTheProviders = ({ children }) => (
   <WalletContext.Provider value={mockWalletContextValue()}>
-    <PaperProvider theme={DefaultTheme}>{children}</PaperProvider>
+    <LoanContext.Provider value={mockLoanContextValue()}>
+      <PaperProvider theme={DefaultTheme}>{children}</PaperProvider>
+    </LoanContext.Provider>
   </WalletContext.Provider>
 );
 
@@ -92,6 +102,8 @@ describe("LoanDetailsScreen", () => {
     mockGoBack.mockClear();
     Alert.alert.mockClear();
     mockConnectWallet.mockClear();
+    mockFundLoan.mockClear();
+    mockFundLoan.mockResolvedValue({ id: "1", status: "funded" });
     jest.clearAllTimers();
     mockIsConnected = false; // Default to not connected
     getLoanDetails.mockImplementation((id) => {
@@ -226,7 +238,7 @@ describe("LoanDetailsScreen", () => {
     );
   });
 
-  it("simulates successful loan funding, shows alert, and navigates back", async () => {
+  it("funds the loan through LoanContext, shows alert, and navigates back", async () => {
     mockIsConnected = true;
     const { findByText, findByPlaceholderText } = render(
       <LoanDetailsScreen route={mockRoute("1")} navigation={mockNavigation} />,
@@ -241,11 +253,40 @@ describe("LoanDetailsScreen", () => {
     fireEvent.press(fundButton);
 
     await waitFor(() => {
+      expect(mockFundLoan).toHaveBeenCalledWith("1", {
+        fundingAmount: 500,
+        paymentMethod: "wallet",
+        walletAddress: mockWalletAddress,
+      });
       expect(Alert.alert).toHaveBeenCalledWith(
         "Funding Successful",
         "You have successfully funded $500 for loan 1.",
       );
       expect(mockGoBack).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("shows an alert and does not navigate back if funding fails", async () => {
+    mockIsConnected = true;
+    mockFundLoan.mockRejectedValue(new Error("KYC verification required"));
+    const { findByText, findByPlaceholderText } = render(
+      <LoanDetailsScreen route={mockRoute("1")} navigation={mockNavigation} />,
+      { wrapper: AllTheProviders },
+    );
+
+    const fundingInput = await findByPlaceholderText(
+      "Enter amount (max $1500.00)",
+    );
+    fireEvent.changeText(fundingInput, "500");
+    const fundButton = await findByText("Fund Now");
+    fireEvent.press(fundButton);
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Funding Failed",
+        "KYC verification required",
+      );
+      expect(mockGoBack).not.toHaveBeenCalled();
     });
   });
 

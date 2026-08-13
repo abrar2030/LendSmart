@@ -19,6 +19,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useWallet } from "../../../contexts/WalletContext"; // To check connection status
+import { useLoan } from "../../../hooks";
 import { getLoanDetails } from "../../../services/apiService";
 
 // Placeholder function for fallback
@@ -102,6 +103,7 @@ const LoanDetailsScreen = ({ route, navigation }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const { isConnected, address, connectWallet } = useWallet(); // Get wallet context
+  const { fundLoan } = useLoan();
 
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -154,12 +156,11 @@ const LoanDetailsScreen = ({ route, navigation }) => {
 
     setIsFunding(true);
     try {
-      // TODO: Implement actual blockchain transaction using blockchainService
-      console.log(
-        `Funding loan ${loanId} with $${amountToFund} from address ${address}`,
-      );
-      // Example: await blockchainService.fundLoan(loanId, amountToFund);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate transaction
+      await fundLoan(loanId, {
+        fundingAmount: amountToFund,
+        paymentMethod: "wallet",
+        walletAddress: address,
+      });
 
       Alert.alert(
         "Funding Successful",

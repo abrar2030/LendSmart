@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { ethers } = require("ethers");
 const User = require("../models/User");
 const authService = require("../security/authService");
 const { getAuditLogger } = require("../compliance/auditLogger");
@@ -479,7 +480,14 @@ class AuthController {
   async updateDetails(req, res) {
     try {
       const userId = req.user.id;
-      const { firstName, lastName, phoneNumber, address, metadata } = req.body;
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        address,
+        metadata,
+        walletAddress,
+      } = req.body;
 
       const fieldsToUpdate = {};
       if (firstName !== undefined) fieldsToUpdate.firstName = firstName;
@@ -487,6 +495,23 @@ class AuthController {
       if (phoneNumber !== undefined) fieldsToUpdate.phoneNumber = phoneNumber;
       if (address !== undefined) fieldsToUpdate.address = address;
       if (metadata !== undefined) fieldsToUpdate.metadata = metadata;
+      if (walletAddress !== undefined) {
+        if (walletAddress !== null && walletAddress !== "") {
+          if (!ethers.isAddress(walletAddress)) {
+            return res.status(400).json({
+              success: false,
+              message: "walletAddress is not a valid Ethereum address",
+            });
+          }
+          // Store the checksummed form so later exact-match comparisons
+          // (e.g. in loanController's KYC/on-chain flows) aren't tripped
+          // up by case differences between requests.
+          fieldsToUpdate.walletAddress = ethers.getAddress(walletAddress);
+        } else {
+          // Explicit null/"" clears a previously-connected wallet.
+          fieldsToUpdate.walletAddress = null;
+        }
+      }
 
       const user = await User.findByIdAndUpdate(userId, fieldsToUpdate, {
         new: true,

@@ -243,11 +243,19 @@ const loanSchema = new mongoose.Schema(
 
     // Blockchain Integration
     blockchainContract: {
-      contractAddress: String,
+      contractAddress: String, // The shared LoanRegistry contract address
+      recordId: String, // This loan's record id within that registry
       transactionHash: String,
       blockchainNetwork: {
         type: String,
-        enum: ["ethereum", "polygon", "bsc", "avalanche"],
+        enum: [
+          "ethereum",
+          "polygon",
+          "bsc",
+          "avalanche",
+          "sepolia",
+          "localhost",
+        ],
         default: "ethereum",
       },
       createdAt: Date,

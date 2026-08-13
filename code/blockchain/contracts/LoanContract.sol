@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -14,6 +15,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * It assumes an ERC20 token is used for lending and repayment.
  */
 contract LoanContract is Ownable, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
     struct Loan {
         uint256 id;
         address borrower;
@@ -45,6 +47,11 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
 
     uint256 public platformFeeRate; // e.g., 100 for 1.00% fee on interest
     address public feeRecipient; // Address to receive platform fees
+
+    // Tracks the amount of each ERC20 token currently committed to active
+    // loan principals held by this contract, so withdrawStuckTokens() can
+    // never sweep out funds that belong to a borrower/lender.
+    mapping(address => uint256) public totalEscrowed;
 
     event LoanRequested(
         uint256 indexed loanId,
@@ -213,12 +220,9 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
         );
 
         // Transfer principal from lender to this contract
-        bool success = token.transferFrom(
-            msg.sender,
-            address(this),
-            loan.principal
-        );
-        require(success, "LoanContract: Token transferFrom failed");
+        token.safeTransferFrom(msg.sender, address(this), loan.principal);
+
+        totalEscrowed[loan.token] += loan.principal;
 
         loan.lender = msg.sender;
         loan.fundedTime = block.timestamp;
@@ -243,11 +247,14 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
         // require(loan.status == LoanStatus.Funded, "LoanContract: Loan not in Funded state");
         // require(msg.sender == loan.borrower || msg.sender == address(this), "LoanContract: Not authorized to disburse"); // if borrower initiated
 
-        IERC20 token = IERC20(loan.token);
-        bool success = token.transfer(loan.borrower, loan.principal);
-        require(success, "LoanContract: Token transfer to borrower failed");
-
+        // Effects before interactions: flip status and release the escrow
+        // accounting before the external token transfer.
         loan.status = LoanStatus.Active;
+        totalEscrowed[loan.token] -= loan.principal;
+
+        IERC20 token = IERC20(loan.token);
+        token.safeTransfer(loan.borrower, loan.principal);
+
         emit LoanDisbursed(_loanId, loan.borrower, loan.principal);
     }
 
@@ -293,12 +300,11 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Transfer repayment from borrower to this contract
-        bool success = token.transferFrom(
+        token.safeTransferFrom(
             msg.sender,
             address(this),
             amountToRepayThisTime
         );
-        require(success, "LoanContract: Repayment token transferFrom failed");
 
         loan.amountRepaid += amountToRepayThisTime;
 
@@ -327,18 +333,13 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
         if (interestPortion > 0 && platformFeeRate > 0) {
             platformFee = (interestPortion * platformFeeRate) / 10000;
             if (platformFee > 0) {
-                bool feeSuccess = token.transfer(feeRecipient, platformFee);
-                require(
-                    feeSuccess,
-                    "LoanContract: Platform fee transfer failed"
-                );
+                token.safeTransfer(feeRecipient, platformFee);
             }
         }
 
         uint256 amountToLender = amountToRepayThisTime - platformFee;
         if (amountToLender > 0) {
-            bool lenderSuccess = token.transfer(loan.lender, amountToLender);
-            require(lenderSuccess, "LoanContract: Transfer to lender failed");
+            token.safeTransfer(loan.lender, amountToLender);
         }
 
         emit LoanRepaid(
@@ -391,8 +392,7 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
      * @param _newFeeRate The new platform fee rate (e.g., 150 for 1.50%).
      */
     function setPlatformFeeRate(uint256 _newFeeRate) external onlyOwner {
-        // Add upper bound check for fee rate if necessary
-        // require(_newFeeRate <= 500, "Fee rate too high"); // e.g. max 5%
+        require(_newFeeRate <= 1000, "LoanContract: Fee rate too high"); // Max 10%
         platformFeeRate = _newFeeRate;
         emit PlatformFeeUpdated(_newFeeRate);
     }
@@ -459,8 +459,10 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
-    // Owner can withdraw any ERC20 tokens accidentally sent to the contract
-    // (excluding the loan tokens which are managed by the loan lifecycle)
+    // Owner can withdraw ERC20 tokens accidentally sent to the contract.
+    // Only the balance in excess of totalEscrowed[_tokenAddress] (active
+    // loan principal currently held by the contract) is withdrawable, so
+    // this can never be used to take funds owed to a borrower or lender.
     function withdrawStuckTokens(
         address _tokenAddress,
         address _to,
@@ -468,14 +470,14 @@ contract LoanContract is Ownable, ReentrancyGuard, Pausable {
     ) external onlyOwner {
         require(_to != address(0), "Cannot send to zero address");
         IERC20 token = IERC20(_tokenAddress);
-        // Basic check: ensure we are not withdrawing tokens that are part of active loan principals held by contract
-        // This is a simplified check. A more robust check would sum up all principals held by the contract.
-        // For now, this function is risky if not used carefully.
-        // A safer approach might be to only allow withdrawal of specific, non-loan tokens.
+        uint256 contractBalance = token.balanceOf(address(this));
+        uint256 escrowed = totalEscrowed[_tokenAddress];
+        uint256 withdrawable =
+            contractBalance > escrowed ? contractBalance - escrowed : 0;
         require(
-            token.balanceOf(address(this)) >= _amount,
-            "Insufficient balance of specified token"
+            _amount <= withdrawable,
+            "Amount exceeds withdrawable (non-escrowed) balance"
         );
-        token.transfer(_to, _amount);
+        token.safeTransfer(_to, _amount);
     }
 }

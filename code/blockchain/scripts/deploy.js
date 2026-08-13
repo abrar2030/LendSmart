@@ -41,19 +41,44 @@ async function main() {
   const lendSmartLoanAddress = await lendSmartLoan.getAddress();
   console.log("LendSmartLoan deployed to:", lendSmartLoanAddress);
 
+  // ── Deploy LoanRegistry ───────────────────────────────────────────────────
+  // Owned by the backend's operator wallet (the address whose private key
+  // is configured as *_PRIVATE_KEY for this network) — that's the account
+  // that will call recordLoanFunded/recordRepayment on the backend's behalf.
+  const registryOperator =
+    process.env.LOAN_REGISTRY_OPERATOR_ADDRESS || deployer.address;
+
+  console.log("\nDeploying LoanRegistry...");
+  const LoanRegistry = await hre.ethers.getContractFactory("LoanRegistry");
+  const loanRegistry = await LoanRegistry.deploy(registryOperator);
+  await loanRegistry.waitForDeployment();
+  const loanRegistryAddress = await loanRegistry.getAddress();
+  console.log("LoanRegistry deployed to:", loanRegistryAddress);
+  console.log("LoanRegistry operator (owner):", registryOperator);
+
   // ── Save Artifacts ────────────────────────────────────────────────────────
   saveArtifacts({
     LoanContract: { contract: loanContract, address: loanContractAddress },
     LendSmartLoan: { contract: lendSmartLoan, address: lendSmartLoanAddress },
+    LoanRegistry: { contract: loanRegistry, address: loanRegistryAddress },
   });
 
   // ── Print Summary ─────────────────────────────────────────────────────────
   console.log("\n=== Deployment Summary ===");
   console.log(`LoanContract:   ${loanContractAddress}`);
   console.log(`LendSmartLoan:  ${lendSmartLoanAddress}`);
+  console.log(`LoanRegistry:   ${loanRegistryAddress}`);
   console.log("\nSave these addresses in your .env file:");
   console.log(`LOAN_CONTRACT_ADDRESS=${loanContractAddress}`);
   console.log(`LENDSMART_LOAN_CONTRACT_ADDRESS=${lendSmartLoanAddress}`);
+  console.log(`LOAN_REGISTRY_ADDRESS=${loanRegistryAddress}`);
+  console.log(
+    "\nCopy code/blockchain/deployments/LoanRegistry.json's `abi` into " +
+      "code/backend/src/config/contracts/LoanRegistry.abi.json if the " +
+      "contract's interface changed, and set LOAN_REGISTRY_ADDRESS plus a " +
+      "matching *_PRIVATE_KEY (for the registryOperator account above) in " +
+      "the backend's environment.",
+  );
 }
 
 function saveArtifacts(contracts) {

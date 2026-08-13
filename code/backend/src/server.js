@@ -12,6 +12,7 @@ const morgan = require("morgan");
 
 // Import configurations and utilities
 const { databaseManager } = require("./config/database");
+const { usingDefaults: usingDefaultJwtSecrets } = require("./config/jwt");
 const { logger } = require("./utils/logger");
 const {
   setupGlobalHandlers,
@@ -54,6 +55,23 @@ class LendSmartServer {
     try {
       // Setup global error handlers
       setupGlobalHandlers();
+
+      // Refuse to run a production deployment on the hardcoded development
+      // JWT/refresh-token secrets: if JWT_SECRET or REFRESH_TOKEN_SECRET are
+      // unset, tokens would be signed with a value published in this
+      // repository, letting anyone forge a valid session.
+      if (process.env.NODE_ENV === "production" && usingDefaultJwtSecrets) {
+        const message =
+          "Refusing to start in production with default JWT_SECRET/REFRESH_TOKEN_SECRET. " +
+          "Set both environment variables to unique, secret values.";
+        logger.error(message);
+        throw new Error(message);
+      } else if (usingDefaultJwtSecrets) {
+        logger.warn(
+          "JWT_SECRET/REFRESH_TOKEN_SECRET are unset; using insecure development defaults. " +
+            "Set these before deploying to production.",
+        );
+      }
 
       // Connect to databases
       await this.connectDatabases();

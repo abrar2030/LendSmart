@@ -1,6 +1,8 @@
 const { ethers } = require("ethers");
 const { logger } = require("../../utils/logger");
 const { AppError } = require("../../middleware/monitoring/errorHandler");
+const blockchainConfig = require("../../config/blockchain");
+const loanRegistryAbi = require("../../config/contracts/LoanRegistry.abi.json");
 
 /**
  * Blockchain Service for LendSmart
@@ -38,6 +40,15 @@ class BlockchainService {
           "https://sepolia.infura.io/v3/YOUR_PROJECT_ID",
         explorerUrl: "https://sepolia.etherscan.io",
       },
+      // Local Hardhat/Ganache node (`npx hardhat node` in code/blockchain),
+      // useful for exercising this integration end-to-end without a public
+      // testnet. Not intended for production use.
+      localhost: {
+        name: "localhost",
+        chainId: 1337,
+        rpcUrl: process.env.LOCALHOST_RPC_URL || "http://127.0.0.1:8545",
+        explorerUrl: null,
+      },
     };
 
     this.gasSettings = {
@@ -48,6 +59,12 @@ class BlockchainService {
 
     this.retryAttempts = 3;
     this.retryDelay = 2000; // 2 seconds
+
+    // LoanRegistry: operator-written audit anchor for off-chain-originated
+    // loans. See code/blockchain/contracts/LoanRegistry.sol.
+    this.loanRegistryAbi = loanRegistryAbi;
+    this.loanRegistryAddress = blockchainConfig.loanRegistryAddress;
+    this.loanRegistryNetwork = blockchainConfig.loanRegistryNetwork;
 
     this.initialize();
   }
@@ -82,6 +99,151 @@ class BlockchainService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Record a newly-funded off-chain loan on the LoanRegistry contract.
+   *
+   * This does NOT deploy a new contract per loan — LendSmart is custodial
+   * (KYC + a payment processor already moved the real funds before this is
+   * called), and the backend's single operator wallet is the only signer
+   * involved, so a shared audit-registry contract is what actually matches
+   * how this platform works. See contracts/LoanRegistry.sol for the design
+   * rationale.
+   *
+   * @param {Object} params
+   * @param {string|import('mongoose').Types.ObjectId} params.loanId - The backend Loan document id.
+   * @param {string} params.borrower - The borrower's wallet address.
+   * @param {string} params.lender - The lender's wallet address.
+   * @param {number|string} params.amount - Principal amount.
+   * @param {number} params.interestRate - Interest rate in basis points (e.g. 500 = 5.00%).
+   * @param {number} params.term - Loan term, in days.
+   * @param {Date|string} params.maturityDate - When the loan matures.
+   * @param {number|string} [params.totalAmountDue] - Principal + interest, if known.
+   * @returns {Promise<Object>} `{ contractAddress, recordId, transactionHash }`
+   */
+  async createLoanContract({
+    loanId,
+    borrower,
+    lender,
+    amount,
+    interestRate,
+    term,
+    maturityDate,
+    totalAmountDue,
+  }) {
+    if (!this.loanRegistryAddress) {
+      throw new AppError(
+        "LoanRegistry contract address is not configured (set LOAN_REGISTRY_ADDRESS)",
+        500,
+        "BLOCKCHAIN_CONFIG_ERROR",
+      );
+    }
+    if (!borrower || !ethers.isAddress(borrower)) {
+      throw new AppError(
+        "Borrower does not have a valid wallet address on file",
+        400,
+        "BLOCKCHAIN_MISSING_WALLET",
+      );
+    }
+    if (!lender || !ethers.isAddress(lender)) {
+      throw new AppError(
+        "Lender does not have a valid wallet address on file",
+        400,
+        "BLOCKCHAIN_MISSING_WALLET",
+      );
+    }
+
+    const offChainLoanId = this._loanIdToUint256(loanId);
+    const termSeconds = BigInt(Math.round(Number(term || 0) * 86400));
+    const maturityTimestamp = maturityDate
+      ? BigInt(Math.floor(new Date(maturityDate).getTime() / 1000))
+      : 0n;
+
+    const result = await this.callContract(
+      this.loanRegistryNetwork,
+      this.loanRegistryAddress,
+      this.loanRegistryAbi,
+      "recordLoanFunded",
+      [
+        offChainLoanId,
+        borrower,
+        lender,
+        ethers.parseUnits(amount.toString(), 18),
+        BigInt(Math.round(Number(interestRate || 0))),
+        termSeconds,
+        maturityTimestamp,
+        totalAmountDue ? ethers.parseUnits(totalAmountDue.toString(), 18) : 0n,
+      ],
+    );
+
+    const fundedEvent = result.events.find((e) => e.name === "LoanFunded");
+
+    return {
+      contractAddress: this.loanRegistryAddress,
+      recordId: fundedEvent ? fundedEvent.args.recordId.toString() : null,
+      transactionHash: result.transactionHash,
+    };
+  }
+
+  /**
+   * Record a repayment against a loan previously anchored via
+   * createLoanContract().
+   *
+   * @param {Object} params
+   * @param {string} params.recordId - The LoanRegistry recordId returned by createLoanContract().
+   * @param {number|string} params.amount - Repayment amount.
+   * @returns {Promise<Object>} `{ transactionHash, isFullyRepaid }`
+   */
+  async recordRepayment({ recordId, amount }) {
+    if (!this.loanRegistryAddress) {
+      throw new AppError(
+        "LoanRegistry contract address is not configured (set LOAN_REGISTRY_ADDRESS)",
+        500,
+        "BLOCKCHAIN_CONFIG_ERROR",
+      );
+    }
+    if (recordId === undefined || recordId === null) {
+      throw new AppError(
+        "Cannot record a repayment without a LoanRegistry recordId " +
+          "(this loan's on-chain funding record may have failed earlier)",
+        400,
+        "BLOCKCHAIN_MISSING_RECORD",
+      );
+    }
+
+    const result = await this.callContract(
+      this.loanRegistryNetwork,
+      this.loanRegistryAddress,
+      this.loanRegistryAbi,
+      "recordRepayment",
+      [BigInt(recordId), ethers.parseUnits(amount.toString(), 18)],
+    );
+
+    const repaymentEvent = result.events.find(
+      (e) => e.name === "RepaymentRecorded",
+    );
+
+    return {
+      transactionHash: result.transactionHash,
+      isFullyRepaid: repaymentEvent ? repaymentEvent.args.isFullyRepaid : null,
+    };
+  }
+
+  /**
+   * Deterministically fold a Mongo ObjectId (or any id string) down into a
+   * uint256 the registry contract can use as `offChainLoanId`.
+   * @private
+   */
+  _loanIdToUint256(loanId) {
+    const idString = loanId.toString();
+    // Mongo ObjectIds are 24 hex chars and fit directly into a uint256.
+    if (/^[0-9a-fA-F]{24}$/.test(idString)) {
+      return BigInt(`0x${idString}`);
+    }
+    // Fall back to hashing anything else (plain numeric ids, UUIDs, etc.)
+    // into the same 256-bit space.
+    return BigInt(ethers.keccak256(ethers.toUtf8Bytes(idString)));
   }
 
   /**

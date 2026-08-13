@@ -977,4 +977,109 @@ describe("LendSmartLoan", function () {
       );
     });
   });
+
+  describe("Withdraw Stuck Tokens", function () {
+    it("Should allow owner to withdraw tokens with no active loans (no escrow)", async function () {
+      const strayAmount = ethers.parseUnits("50", 18);
+      await mockToken.mint(lendSmartLoan.target, strayAmount);
+
+      await expect(
+        lendSmartLoan
+          .connect(owner)
+          .withdrawStuckTokens(
+            mockToken.target,
+            otherAccount.address,
+            strayAmount,
+          ),
+      ).to.changeTokenBalance(mockToken, otherAccount, strayAmount);
+    });
+
+    it("Should prevent owner from withdrawing escrowed loan principal", async function () {
+      // Fund a loan so the principal is held (escrowed) by the contract
+      // while it awaits disbursement.
+      await lendSmartLoan
+        .connect(borrower)
+        .requestLoan(
+          mockToken.target,
+          LOAN_AMOUNT,
+          INTEREST_RATE,
+          LOAN_DURATION,
+          "Business expansion",
+          false,
+          ethers.ZeroAddress,
+          0,
+        );
+      const loanId = 1;
+      await lendSmartLoan.connect(lender).fundLoan(loanId);
+
+      // The full principal held by the contract is escrowed, so nothing
+      // is withdrawable even though the raw token balance is non-zero.
+      await expect(
+        lendSmartLoan
+          .connect(owner)
+          .withdrawStuckTokens(mockToken.target, owner.address, 1),
+      ).to.be.revertedWith(
+        "LendSmartLoan: Amount exceeds withdrawable (non-escrowed) balance",
+      );
+
+      // Once a stray amount is sent on top of the escrowed principal, only
+      // that surplus can be withdrawn.
+      const strayAmount = ethers.parseUnits("10", 18);
+      await mockToken.mint(lendSmartLoan.target, strayAmount);
+
+      await expect(
+        lendSmartLoan
+          .connect(owner)
+          .withdrawStuckTokens(
+            mockToken.target,
+            owner.address,
+            strayAmount + 1n,
+          ),
+      ).to.be.revertedWith(
+        "LendSmartLoan: Amount exceeds withdrawable (non-escrowed) balance",
+      );
+
+      await expect(
+        lendSmartLoan
+          .connect(owner)
+          .withdrawStuckTokens(mockToken.target, owner.address, strayAmount),
+      ).to.changeTokenBalance(mockToken, owner, strayAmount);
+    });
+
+    it("Should prevent owner from withdrawing deposited collateral", async function () {
+      await lendSmartLoan
+        .connect(borrower)
+        .requestLoan(
+          mockToken.target,
+          LOAN_AMOUNT,
+          INTEREST_RATE,
+          LOAN_DURATION,
+          "Business expansion",
+          true,
+          mockCollateralToken.target,
+          COLLATERAL_AMOUNT,
+        );
+      const loanId = 1;
+      await lendSmartLoan.connect(borrower).depositCollateral(loanId);
+
+      await expect(
+        lendSmartLoan
+          .connect(owner)
+          .withdrawStuckTokens(mockCollateralToken.target, owner.address, 1),
+      ).to.be.revertedWith(
+        "LendSmartLoan: Amount exceeds withdrawable (non-escrowed) balance",
+      );
+    });
+
+    it("Should prevent non-owners from withdrawing stuck tokens", async function () {
+      await expect(
+        lendSmartLoan
+          .connect(otherAccount)
+          .withdrawStuckTokens(mockToken.target, otherAccount.address, 1),
+      ).to.be.revertedWithCustomError(
+        lendSmartLoan,
+        "OwnableUnauthorizedAccount",
+      );
+    });
+  });
 });

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -13,6 +14,8 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * repayment, and default processes with additional features for risk management.
  */
 contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
+
     struct Loan {
         uint256 id;
         address borrower;
@@ -50,6 +53,12 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => Loan) public loans;
     mapping(address => uint256[]) public userLoanIds; // Borrower or Lender to their loan IDs
     mapping(address => uint256) public userReputationScores; // User reputation scores
+
+    // Tracks the amount of each ERC20 token that is currently committed to
+    // active loans (principal awaiting disbursement + deposited collateral).
+    // This prevents withdrawStuckTokens() from being able to sweep out funds
+    // that belong to borrowers/lenders rather than being genuinely "stuck".
+    mapping(address => uint256) public totalEscrowed;
 
     uint256 public platformFeeRate; // e.g., 100 for 1.00% fee on interest
     address public feeRecipient; // Address to receive platform fees
@@ -332,12 +341,13 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         );
 
         // Transfer collateral from borrower to this contract
-        bool success = collateralToken.transferFrom(
+        collateralToken.safeTransferFrom(
             msg.sender,
             address(this),
             loan.collateralAmount
         );
-        require(success, "LendSmartLoan: Collateral token transferFrom failed");
+
+        totalEscrowed[loan.collateralToken] += loan.collateralAmount;
 
         emit CollateralDeposited(
             _loanId,
@@ -385,12 +395,9 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         );
 
         // Transfer principal from lender to this contract
-        bool success = token.transferFrom(
-            msg.sender,
-            address(this),
-            loan.principal
-        );
-        require(success, "LendSmartLoan: Token transferFrom failed");
+        token.safeTransferFrom(msg.sender, address(this), loan.principal);
+
+        totalEscrowed[loan.token] += loan.principal;
 
         loan.lender = msg.sender;
         loan.fundedTime = block.timestamp;
@@ -481,12 +488,14 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         // Uncomment the following line if repayment schedule is mandatory
         // require(loan.repaymentSchedule.length > 0, "LendSmartLoan: Repayment schedule not created");
 
-        IERC20 token = IERC20(loan.token);
-        bool success = token.transfer(loan.borrower, loan.principal);
-        require(success, "LendSmartLoan: Token transfer to borrower failed");
-
+        // Effects before interactions: flip status and release the escrow
+        // accounting before the external token transfer.
         loan.status = LoanStatus.Active;
         loan.disbursedTime = block.timestamp;
+        totalEscrowed[loan.token] -= loan.principal;
+
+        IERC20 token = IERC20(loan.token);
+        token.safeTransfer(loan.borrower, loan.principal);
 
         emit LoanDisbursed(
             _loanId,
@@ -543,12 +552,11 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Transfer repayment from borrower to this contract
-        bool success = token.transferFrom(
+        token.safeTransferFrom(
             msg.sender,
             address(this),
             amountToRepayThisTime
         );
-        require(success, "LendSmartLoan: Repayment token transferFrom failed");
 
         loan.amountRepaid += amountToRepayThisTime;
         remainingDue = loan.repaymentAmount - loan.amountRepaid;
@@ -579,18 +587,13 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         if (interestPortion > 0 && platformFeeRate > 0) {
             platformFee = (interestPortion * platformFeeRate) / 10000;
             if (platformFee > 0) {
-                bool feeSuccess = token.transfer(feeRecipient, platformFee);
-                require(
-                    feeSuccess,
-                    "LendSmartLoan: Platform fee transfer failed"
-                );
+                token.safeTransfer(feeRecipient, platformFee);
             }
         }
 
         uint256 amountToLender = amountToRepayThisTime - platformFee;
         if (amountToLender > 0) {
-            bool lenderSuccess = token.transfer(loan.lender, amountToLender);
-            require(lenderSuccess, "LendSmartLoan: Transfer to lender failed");
+            token.safeTransfer(loan.lender, amountToLender);
         }
 
         emit LoanRepaid(
@@ -627,21 +630,22 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
 
         if (loan.collateralAmount > 0 && loan.collateralToken != address(0)) {
             IERC20 collateralToken = IERC20(loan.collateralToken);
-            bool success = collateralToken.transfer(
-                loan.borrower,
-                loan.collateralAmount
-            );
-            require(success, "LendSmartLoan: Collateral release failed");
+            uint256 releasedAmount = loan.collateralAmount;
+            address collateralTokenAddress = loan.collateralToken;
+
+            // Reset collateral amount and escrow accounting before the
+            // external call to prevent double-release.
+            loan.collateralAmount = 0;
+            totalEscrowed[collateralTokenAddress] -= releasedAmount;
+
+            collateralToken.safeTransfer(loan.borrower, releasedAmount);
 
             emit CollateralReleased(
                 _loanId,
-                loan.collateralToken,
-                loan.collateralAmount,
+                collateralTokenAddress,
+                releasedAmount,
                 loan.borrower
             );
-
-            // Reset collateral amount to prevent double-release
-            loan.collateralAmount = 0;
         }
     }
 
@@ -702,24 +706,22 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
         // If loan was collateralized, transfer collateral to lender
         if (loan.isCollateralized && loan.collateralAmount > 0) {
             IERC20 collateralToken = IERC20(loan.collateralToken);
-            bool success = collateralToken.transfer(
-                loan.lender,
-                loan.collateralAmount
-            );
-            require(
-                success,
-                "LendSmartLoan: Collateral transfer to lender failed"
-            );
+            uint256 seizedAmount = loan.collateralAmount;
+            address collateralTokenAddress = loan.collateralToken;
+
+            // Reset collateral amount and escrow accounting before the
+            // external call to prevent double-release.
+            loan.collateralAmount = 0;
+            totalEscrowed[collateralTokenAddress] -= seizedAmount;
+
+            collateralToken.safeTransfer(loan.lender, seizedAmount);
 
             emit CollateralReleased(
                 _loanId,
-                loan.collateralToken,
-                loan.collateralAmount,
+                collateralTokenAddress,
+                seizedAmount,
                 loan.lender
             );
-
-            // Reset collateral amount to prevent double-release
-            loan.collateralAmount = 0;
         }
 
         // Update borrower reputation score negatively for defaulting
@@ -874,8 +876,12 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @dev Owner can withdraw any ERC20 tokens accidentally sent to the contract
-     * (excluding the loan tokens which are managed by the loan lifecycle)
+     * @dev Owner can withdraw ERC20 tokens accidentally sent to the contract.
+     * This can NEVER touch funds that are actively escrowed for a loan
+     * (principal awaiting disbursement or deposited collateral) — only the
+     * surplus balance above `totalEscrowed[_tokenAddress]` is withdrawable,
+     * so this function cannot be used to rug borrower collateral or lender
+     * principal.
      * @param _tokenAddress The address of the token to withdraw.
      * @param _to The address to send the tokens to.
      * @param _amount The amount of tokens to withdraw.
@@ -890,10 +896,14 @@ contract LendSmartLoan is Ownable, ReentrancyGuard, Pausable {
             "LendSmartLoan: Cannot send to zero address"
         );
         IERC20 token = IERC20(_tokenAddress);
+        uint256 contractBalance = token.balanceOf(address(this));
+        uint256 escrowed = totalEscrowed[_tokenAddress];
+        uint256 withdrawable =
+            contractBalance > escrowed ? contractBalance - escrowed : 0;
         require(
-            token.balanceOf(address(this)) >= _amount,
-            "LendSmartLoan: Insufficient balance of specified token"
+            _amount <= withdrawable,
+            "LendSmartLoan: Amount exceeds withdrawable (non-escrowed) balance"
         );
-        token.transfer(_to, _amount);
+        token.safeTransfer(_to, _amount);
     }
 }

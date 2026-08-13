@@ -1,5 +1,6 @@
 const Loan = require("../models/Loan");
 const User = require("../models/User");
+const { ethers } = require("ethers");
 const { getAuditLogger } = require("../compliance/auditLogger");
 const { getEncryptionService } = require("../config/security/encryption");
 const { logger } = require("../utils/logger");
@@ -341,6 +342,31 @@ class LoanController {
         });
       }
 
+      // The lender's on-chain wallet may already be on file from a prior
+      // profile update, or may be arriving for the first time in this
+      // funding request (e.g. mobile connects a wallet at fund-time rather
+      // than requiring it be set ahead of time). Prefer whichever is
+      // freshest and persist it back to the profile either way, so
+      // blockchainService.createLoanContract() below always has an address
+      // to attribute this loan to and future fundings don't need to resend it.
+      if (
+        walletAddress !== undefined &&
+        walletAddress !== null &&
+        walletAddress !== ""
+      ) {
+        if (!ethers.isAddress(walletAddress)) {
+          return res.status(400).json({
+            success: false,
+            message: "walletAddress is not a valid Ethereum address",
+          });
+        }
+        const checksummedWallet = ethers.getAddress(walletAddress);
+        if (lender.walletAddress !== checksummedWallet) {
+          lender.walletAddress = checksummedWallet;
+          await lender.save();
+        }
+      }
+
       // Process payment (integration with payment processor)
       const paymentResult = await this.processLoanFunding({
         lenderId,
@@ -383,10 +409,12 @@ class LoanController {
           interestRate: loan.interestRate,
           term: loan.term,
           maturityDate: loan.maturityDate,
+          totalAmountDue: loan.totalAmountDue,
         });
 
         loan.blockchainContract = {
           contractAddress: contractResult.contractAddress,
+          recordId: contractResult.recordId,
           transactionHash: contractResult.transactionHash,
           createdAt: new Date(),
         };
@@ -542,11 +570,10 @@ class LoanController {
 
       // Update blockchain contract
       try {
-        if (loan.blockchainContract) {
+        if (loan.blockchainContract && loan.blockchainContract.recordId) {
           await blockchainService.recordRepayment({
-            contractAddress: loan.blockchainContract.contractAddress,
+            recordId: loan.blockchainContract.recordId,
             amount,
-            transactionHash: paymentResult.transactionHash,
           });
         }
       } catch (blockchainError) {

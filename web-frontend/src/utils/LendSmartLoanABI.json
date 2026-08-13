@@ -64,6 +64,42 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "SafeERC20FailedOperation",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "CollateralDeposited",
+      "type": "event"
+    },
+    {
       "anonymous": false,
       "inputs": [
         {
@@ -92,31 +128,6 @@
         }
       ],
       "name": "CollateralReleased",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "loanId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "CollateralDeposited",
       "type": "event"
     },
     {
@@ -155,6 +166,25 @@
           "type": "uint256"
         },
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "defaultTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "LoanDefaulted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "borrower",
@@ -174,25 +204,6 @@
         }
       ],
       "name": "LoanDisbursed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "loanId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "defaultTime",
-          "type": "uint256"
-        }
-      ],
-      "name": "LoanDefaulted",
       "type": "event"
     },
     {
@@ -335,11 +346,13 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
           "internalType": "address",
           "name": "previousOwner",
           "type": "address"
         },
         {
+          "indexed": true,
           "internalType": "address",
           "name": "newOwner",
           "type": "address"
@@ -422,6 +435,19 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newRiskAssessor",
+          "type": "address"
+        }
+      ],
+      "name": "RiskAssessorUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "uint256",
           "name": "loanId",
@@ -435,19 +461,6 @@
         }
       ],
       "name": "RiskScoreAssigned",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "newRiskAssessor",
-          "type": "address"
-        }
-      ],
-      "name": "RiskAssessorUpdated",
       "type": "event"
     },
     {
@@ -544,19 +557,6 @@
       "name": "fundLoan",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "gracePeriod",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -660,6 +660,16 @@
               "internalType": "address",
               "name": "collateralToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "repaymentSchedule",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "repaymentAmounts",
+              "type": "uint256[]"
             }
           ],
           "internalType": "struct LendSmartLoan.Loan",
@@ -708,6 +718,19 @@
         }
       ],
       "name": "getUserReputationScore",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gracePeriod",
       "outputs": [
         {
           "internalType": "uint256",
@@ -908,6 +931,13 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1084,6 +1114,25 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "totalEscrowed",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "newOwner",
           "type": "address"
         }
@@ -1098,6 +1147,30 @@
       "name": "unpause",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "userLoanIds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

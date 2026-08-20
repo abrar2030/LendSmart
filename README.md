@@ -1,26 +1,25 @@
 # LendSmart
 
-![CI/CD Status](https://img.shields.io/github/actions/workflow/status/quantsingularity/LendSmart/cicd.yml?branch=main&label=CI/CD&logo=github)
-[![Test Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)](https://github.com/quantsingularity/LendSmart/actions)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![CI/CD Status](https://img.shields.io/github/actions/workflow/status/quantsingularity/LendSmart/cicd.yml?branch=main&label=CI%2FCD&logo=github)
 
 ## AI-Powered Decentralized Lending Platform
 
-LendSmart is an innovative decentralized lending platform that combines blockchain technology with artificial intelligence to create a more accessible, efficient, and secure lending ecosystem for borrowers and lenders worldwide.
+LendSmart is a decentralized lending platform: a Node.js/Express backend for auth, users, loans, and admin, paired with a React web dashboard and a React Native mobile app with real wallet connectivity (ethers.js and WalletConnect on both clients). Loan risk is assessed two ways: a rule-based JavaScript scoring service running in the backend itself, and a genuine Python ML service (LightGBM, XGBoost, and a scikit-learn ensemble, with SHAP for explainability) that the backend calls over HTTP.
 
 <div align="center">
-  <img src="docs/images/homepage.bmp" alt="LendSmart HomePage" width="80%">
+  <img src="docs/images/homepage.bmp" alt="LendSmart HomePage" width="100%">
 </div>
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Project Structure](#project-structure)
-- [Key Features](#key-features)
+- [Feature Status](#feature-status)
 - [Technology Stack](#technology-stack)
 - [Architecture](#architecture)
-- [Development Workflow](#development-workflow)
 - [Installation and Setup](#installation-and-setup)
+- [Running the Stack](#running-the-stack)
+- [API Surface](#api-surface)
 - [Testing](#testing)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Documentation](#documentation)
@@ -29,339 +28,231 @@ LendSmart is an innovative decentralized lending platform that combines blockcha
 
 ## Overview
 
-LendSmart revolutionizes traditional lending by leveraging blockchain technology and artificial intelligence to create a transparent, efficient, and accessible lending platform. The system uses AI to assess borrower creditworthiness beyond traditional metrics, while smart contracts ensure secure and automated loan management on the blockchain.
+LendSmart demonstrates a decentralized lending workflow across a real, runnable codebase. The Express backend, Hardhat smart contracts, and both clients are wired and covered by tests. Credit scoring has two independent, genuinely wired paths: `creditScoringService.js` computes a rule-based score in-process from payment history, while `aiService.js` calls a separate Flask service backed by a real, substantial ML model. Both are real; they're just two different scoring mechanisms living side by side rather than one unified pipeline.
 
 ## Project Structure
 
-The project is organized into several main components:
-
 ```
 LendSmart/
-├── code/                   # Core backend logic, services, and shared utilities
-├── docs/                   # Project documentation
-├── infrastructure/         # DevOps, deployment, and infra-related code
-├── mobile-frontend/        # Mobile application
-├── web-frontend/           # Web dashboard
-├── scripts/                # Automation, setup, and utility scripts
-├── LICENSE                 # License information
-└── README.md               # Project overview and instructions
+├── code/
+│   ├── backend/                  # Express application
+│   │   ├── src/routes/           # auth, users, loans, admin
+│   │   ├── src/controllers/      # Request handlers for each route group
+│   │   ├── src/services/         # creditScoringService (rule-based), ai/aiService
+│   │   │                         # (calls the Flask ML service), blockchain service
+│   │   ├── src/compliance/       # auditLogger, gdprCompliance (both genuinely wired
+│   │   │                         # into controllers and services)
+│   │   ├── src/security/         # authService
+│   │   ├── src/middleware/       # rate limiting, error handling, monitoring
+│   │   └── tests/                # unit, integration, and security test suites
+│   ├── blockchain/               # Hardhat project (the active toolchain)
+│   │   ├── contracts/            # LendSmartLoan, LoanContract, LoanRegistry, MockERC20
+│   │   ├── truffle/              # A separate, unused Truffle project; no script
+│   │   │                         # in this repo references it
+│   │   └── test/                 # Hardhat test suite
+│   └── ml_services/
+│       ├── credit_risk/          # LightGBM/XGBoost/sklearn ensemble with SHAP,
+│       │                         # served by prediction_service.py (Flask)
+│       ├── compliance/           # Audit log storage
+│       └── integration/          # Integration helpers
+├── web-frontend/                 # React (Create React App) dashboard
+├── mobile-frontend/              # React Native app (bare RN plus Expo tooling,
+│                                 # with a Gemfile for native iOS builds)
+├── infrastructure/               # Docker, Kubernetes, Terraform, Ansible, monitoring
+├── scripts/                      # Setup, run, test, lint, and deployment scripts
+├── docs/                         # Documentation (this directory)
+└── README.md
 ```
 
-## Key Features
+## Feature Status
 
-### Smart Contract-Based Lending
+### Application tier (wired and tested)
 
-- **Automated Loan Management**: Smart contracts handle loan disbursement, repayments, and defaults
-- **Collateralized & Uncollateralized Loans**: Support for both secured and unsecured lending options
-- **Flexible Terms**: Customizable loan durations, interest rates, and repayment schedules
-- **Transparent Transactions**: All loan activities recorded on the blockchain for full transparency
-
-### AI-Powered Credit Scoring
-
-- **Alternative Data Analysis**: Assess creditworthiness using non-traditional data points
-- **Behavioral Scoring**: Analyze borrower behavior patterns to predict repayment likelihood
-- **Risk-Based Pricing**: Automatically determine appropriate interest rates based on risk profiles
-- **Continuous Learning**: Models improve over time as more lending data is processed
-
-### Decentralized Finance Integration
-
-- **Multi-Chain Support**: Compatible with Ethereum, Polygon, and other EVM-compatible blockchains
-- **DeFi Protocol Integration**: Connect with other DeFi protocols for liquidity and yield generation
-- **Tokenized Loan Assets**: Represent loans as NFTs that can be traded or used as collateral
-- **Cross-Chain Interoperability**: Access liquidity across multiple blockchain networks
-
-### User Experience
-
-- **Intuitive Interface**: Simple, user-friendly dashboards for both borrowers and lenders
-- **Real-Time Analytics**: Track loan performance, interest accrual, and portfolio metrics
-- **Mobile Access**: Responsive design and dedicated mobile app for on-the-go management
-- **Notification System**: Alerts for important loan events and payment reminders
+| Component                     | Details                                                                                                                                                                                                                           |
+| :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API**                       | Express backend exposing `/api/auth`, `/api/users`, `/api/loans`, and `/api/admin`.                                                                                                                                               |
+| **Auth**                      | JWT access and refresh tokens, password update, and MFA setup and verification endpoints.                                                                                                                                         |
+| **Rule-based credit scoring** | `creditScoringService.js` computes a score in-process from on-time payment ratio, default ratio, and late-payment count.                                                                                                          |
+| **ML-based risk scoring**     | `aiService.js` calls a separate Flask service (`/predict/risk`) backed by a real LightGBM, XGBoost, and scikit-learn ensemble model, with SHAP for explainability.                                                                |
+| **Compliance**                | `auditLogger.js` and `gdprCompliance.js` are genuinely imported and used across the loan, admin, and auth controllers, the credit scoring and file upload services, and input validation, not just present as standalone files.   |
+| **Smart contracts**           | Hardhat-managed Solidity contracts: `LendSmartLoan`, `LoanContract`, `LoanRegistry`, and a `MockERC20` test token.                                                                                                                |
+| **Web dashboard**             | React app (plain JavaScript, Create React App) with Material-UI, Tailwind CSS, ethers.js, and Web3Modal for wallet connections. There is no charting or data-visualization library in this project.                               |
+| **Mobile app**                | React Native app (a mix of TypeScript and JavaScript) with React Context for auth, wallet, loan, and theme state, ethers.js, and WalletConnect (`@walletconnect/modal-react-native`) for a genuine mobile wallet connection flow. |
 
 ## Technology Stack
 
-### Blockchain & Smart Contracts
-
-- **Blockchain**: Ethereum, Polygon
-- **Smart Contract Language**: Solidity
-- **Development Framework**: Hardhat, Truffle
-- **Testing**: Waffle, Chai
-- **Libraries**: OpenZeppelin, Chainlink
-
-### Backend
-
-- **Language**: Node.js, TypeScript
-- **Framework**: Express, NestJS
-- **Database**: PostgreSQL, MongoDB
-- **API Documentation**: Swagger
-- **Authentication**: JWT, OAuth2
-
-### Frontend
-
-- **Framework**: React with TypeScript
-- **State Management**: Redux Toolkit
-- **Styling**: Tailwind CSS, Styled Components
-- **Web3 Integration**: ethers.js, web3.js
-- **Data Visualization**: D3.js, Recharts
-
-### AI & Machine Learning
-
-- **Languages**: Python, R
-- **Frameworks**: TensorFlow, PyTorch, scikit-learn
-- **Data Processing**: Pandas, NumPy
-- **Feature Engineering**: Feature-engine, tsfresh
-- **Model Deployment**: MLflow, TensorFlow Serving
-
-### Infrastructure
-
-- **Containerization**: Docker
-- **Orchestration**: Kubernetes
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Prometheus, Grafana
-- **Infrastructure as Code**: Terraform
+| Area            | Technology                                                                                                                            |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| Blockchain      | Solidity, Hardhat                                                                                                                     |
+| Backend API     | Node.js, Express, JavaScript                                                                                                          |
+| Data layer      | MongoDB (Mongoose), Redis                                                                                                             |
+| ML service      | Python, Flask, LightGBM, XGBoost, scikit-learn, SHAP                                                                                  |
+| Web frontend    | React 18, JavaScript, Create React App, Material-UI, Emotion, Tailwind CSS, ethers.js, Web3Modal                                      |
+| Mobile frontend | React Native, Expo tooling, TypeScript and JavaScript, React Navigation, React Native Paper, ethers.js, WalletConnect, Formik and Yup |
+| Infrastructure  | Docker, Docker Compose, Kubernetes, Terraform, Ansible                                                                                |
+| Monitoring      | Prometheus, Grafana                                                                                                                   |
+| CI/CD           | GitHub Actions                                                                                                                        |
+| Testing         | Jest (backend, web, and mobile), Hardhat (contracts), pytest (the ML service)                                                         |
 
 ## Architecture
 
-LendSmart follows a modular architecture with the following components:
-
 ```
-LendSmart/
-├── Smart Contracts
-│   ├── Loan Factory
-│   ├── Loan Implementation
-│   ├── Credit Scoring Oracle
-│   └── Treasury Management
-├── Backend Services
-│   ├── API Gateway
-│   ├── Loan Service
-│   ├── User Service
-│   ├── Blockchain Service
-│   └── AI Service
-├── AI Models
-│   ├── Credit Scoring Model
-│   ├── Risk Assessment Model
-│   ├── Interest Rate Model
-│   └── Fraud Detection Model
-├── Frontend Applications
-│   ├── Web Dashboard
-│   └── Mobile App
-└── Infrastructure
-    ├── Database Cluster
-    ├── Message Queue
-    ├── Cache Layer
-    └── Monitoring Stack
+Clients
+  ├── web-frontend (React)               ── HTTP/JSON ──┐
+  └── mobile-frontend (React Native)     ── HTTP/JSON ──┤
+                                                        ▼
+Backend (Express, /api)
+  ├── Routes    auth, users, loans, admin
+  ├── Services   creditScoringService (rule-based), aiService (calls the ML service),
+  │              blockchain service
+  ├── Compliance  auditLogger, gdprCompliance
+  └── Data layer   MongoDB (Mongoose), Redis
+
+ML service (code/ml_services/credit_risk, Flask, called over HTTP by aiService.js)
+  LightGBM / XGBoost / scikit-learn ensemble, SHAP for explainability
+
+Blockchain (Hardhat / Solidity)
+  LendSmartLoan · LoanContract · LoanRegistry · MockERC20
 ```
 
-## Development Workflow
-
-### Loan Processing Flow
-
-1. Borrower submits loan application with required information
-2. AI models analyze borrower data and determine creditworthiness
-3. Smart contracts create loan terms based on AI assessment
-4. Lenders review and fund loans that match their criteria
-5. Smart contracts manage loan disbursement and repayment
-6. AI models continuously learn from loan performance data
-
-### AI Model Development
-
-- Classification models for borrower default prediction
-- Regression models to calculate appropriate interest rates
-- Clustering models for borrower segmentation
-- Time series models for market trend analysis and liquidity forecasting
-
-### 1. Smart Contract Development
-
-- Write Solidity contracts to:
-  - Manage loan creation, disbursement, and repayment
-  - Handle disputes and penalties for default
-  - Implement governance and protocol upgrades
-  - Ensure security and gas optimization
-
-### 2. AI Model Development
-
-- Train AI models on financial and behavioral datasets
-- Use supervised learning to predict borrower risks
-- Implement reinforcement learning for dynamic interest rate adjustment
-- Deploy models as API endpoints for integration with the platform
-
-### 3. Backend Development
-
-- Build API endpoints for interacting with smart contracts and AI models
-- Securely handle off-chain borrower data
-- Implement event listeners for blockchain transactions
-- Create services for user management, notifications, and analytics
-
-### 4. Frontend Development
-
-- Develop loan application forms and dashboards for lenders and borrowers
-- Create interactive visualizations for loan performance
-- Implement Web3 connectivity for blockchain interactions
-- Build responsive interfaces for both web and mobile platforms
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detail.
 
 ## Installation and Setup
 
-### 1. Clone the Repository
+Prerequisites: Node.js 20+, Python 3.11+, and Docker.
 
 ```bash
 git clone https://github.com/quantsingularity/LendSmart.git
 cd LendSmart
 
-# Run the setup script to configure the environment
-./setup_lendsmart_env.sh
-```
-
-### 3. Install Backend Dependencies
-
-```bash
-cd backend
+# Blockchain
+cd code/blockchain
 npm install
-```
 
-### 4. Install Frontend Dependencies
-
-```bash
-cd web-frontend
+# Backend
+cd ../backend
 npm install
-```
 
-### 5. Set Up AI Models
-
-```bash
-cd ml-model
+# ML service
+cd ../ml_services/credit_risk
 pip install -r requirements.txt
+
+# Web frontend
+cd ../../../web-frontend
+npm install
+
+# Mobile frontend
+cd ../mobile-frontend
+npm install
 ```
 
-### 6. Deploy Smart Contracts
+For an automated setup:
 
 ```bash
-cd smart-contracts
-npx hardhat compile
-npx hardhat deploy --network <network_name>
+git clone https://github.com/quantsingularity/LendSmart.git
+cd LendSmart
+./scripts/setup_lendsmart_env.sh
+./scripts/run_lendsmart.sh
 ```
 
-### 7. Start the Application
+Full, environment-specific instructions are in [docs/INSTALLATION.md](docs/INSTALLATION.md).
+
+## Running the Stack
 
 ```bash
-# Start the entire application using the convenience script
-./run_lendsmart.sh
+# 1) Supporting services (from infrastructure/, Docker required)
+docker compose -f docker-compose.yml up -d database redis
 
-# Or start components individually
-# Start Backend
-cd backend
-npm start
+# 2) Local chain (from code/blockchain)
+npx hardhat node                   # local chain at http://127.0.0.1:8545
 
-# Start Frontend
-cd web-frontend
+# 3) ML service (from code/ml_services/credit_risk)
+python prediction_service.py       # serves http://localhost:8001
+
+# 4) Backend (from code/backend)
+npm start                          # serves http://localhost:3000 by default;
+                                    # override PORT if you're also running the
+                                    # web dashboard, since its dev server defaults
+                                    # to the same port
+
+# 5) Web dashboard (from web-frontend)
+npm start                          # http://localhost:3000 by default (CRA)
+
+# 6) Mobile app (from mobile-frontend)
 npm start
 ```
+
+See [docs/USAGE.md](docs/USAGE.md) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+## API Surface
+
+Base URL `http://localhost:3000/api`.
+
+| Group | Prefix       | Highlights                                                                                                   |
+| :---- | :----------- | :----------------------------------------------------------------------------------------------------------- |
+| Auth  | `/api/auth`  | `register`, `login`, `logout`, `refresh`, `me`, `updatedetails`, `updatepassword`, `setup-mfa`, `verify-mfa` |
+| Users | `/api/users` | `role/{role}`, `wallet/{address}`                                                                            |
+| Loans | `/api/loans` | list/create, `{id}`, `{id}/fund`                                                                             |
+| Admin | `/api/admin` | `users`, `users/{id}/status`, `loans`, `loans/{id}/status`, `analytics`, `metrics`, `audit-logs/export`      |
+
+Full request and response shapes are in [docs/API.md](docs/API.md).
 
 ## Testing
 
-The project maintains comprehensive test coverage across all components to ensure reliability and security.
-
-### Test Coverage
-
-| Component           | Coverage | Status |
-| ------------------- | -------- | ------ |
-| Smart Contracts     | 92%      | ✅     |
-| Backend Services    | 85%      | ✅     |
-| AI Models           | 78%      | ✅     |
-| Frontend Components | 80%      | ✅     |
-| Integration Tests   | 79%      | ✅     |
-| Overall             | 83%      | ✅     |
-
-### Smart Contract Tests
-
-- Unit tests for all contract functions
-- Integration tests for contract interactions
-- Security tests for vulnerability detection
-- Gas optimization tests
-
-### Backend Tests
-
-- API endpoint tests
-- Service layer tests
-- Database integration tests
-- Authentication and authorization tests
-
-### AI Model Tests
-
-- Model accuracy validation
-- Cross-validation tests
-- Performance benchmarks
-- A/B testing framework
-
-### Frontend Tests
-
-- Component tests
-- Integration tests
-- End-to-end tests
-- User flow tests
-
-To run tests:
-
 ```bash
-# Smart contract tests
-cd smart-contracts
+# Backend (from code/backend)
+npm test
+
+# Smart contracts (from code/blockchain)
 npx hardhat test
 
-# Backend tests
-cd backend
+# ML service (from code/ml_services/credit_risk)
+pytest
+
+# Web (from web-frontend)
 npm test
 
-# Frontend tests
-cd web-frontend
+# Mobile (from mobile-frontend)
 npm test
 
-# AI model tests
-cd ml-model
-python -m pytest
+# Everything, via the project script
+./scripts/run_all_tests.sh
 ```
+
+The backend suite has 5 test files across unit, integration, and security categories. The Hardhat suite has 4 files. The ML service has its own test file. The web dashboard has 10 test files; the mobile app has 11.
 
 ## CI/CD Pipeline
 
-LendSmart uses GitHub Actions for continuous integration and deployment:
+GitHub Actions (`.github/workflows/cicd.yml`) runs four jobs on push, pull request, and manual dispatch:
 
-| Stage                | Control Area                    | Institutional-Grade Detail                                                              |
-| :------------------- | :------------------------------ | :-------------------------------------------------------------------------------------- |
-| **Formatting Check** | Change Triggers                 | Enforced on all `push` and `pull_request` events to `main` and `develop`                |
-|                      | Manual Oversight                | On-demand execution via controlled `workflow_dispatch`                                  |
-|                      | Source Integrity                | Full repository checkout with complete Git history for auditability                     |
-|                      | Python Runtime Standardization  | Python 3.10 with deterministic dependency caching                                       |
-|                      | Backend Code Hygiene            | `autoflake` to detect unused imports/variables using non-mutating diff-based validation |
-|                      | Backend Style Compliance        | `black --check` to enforce institutional formatting standards                           |
-|                      | Non-Intrusive Validation        | Temporary workspace comparison to prevent unauthorized source modification              |
-|                      | Node.js Runtime Control         | Node.js 18 with locked dependency installation via `npm ci`                             |
-|                      | Web Frontend Formatting Control | Prettier checks for web-facing assets                                                   |
-|                      | Mobile Frontend Formatting      | Prettier enforcement for mobile application codebases                                   |
-|                      | Documentation Governance        | Repository-wide Markdown formatting enforcement                                         |
-|                      | Infrastructure Configuration    | Prettier validation for YAML/YML infrastructure definitions                             |
-|                      | Compliance Gate                 | Any formatting deviation fails the pipeline and blocks merge                            |
+| Job                           | Depends on          | What it does                                                                         |
+| :---------------------------- | :------------------ | :----------------------------------------------------------------------------------- |
+| Code Quality Checks           | -                   | Formatter checks across the repository                                               |
+| Backend Tests                 | Code Quality Checks | Runs the Jest suite with coverage (Node.js 20) and uploads the report as an artifact |
+| Smart Contract Compile & Test | Code Quality Checks | Compiles the contracts with Hardhat and runs the contract test suite                 |
+| Web Build                     | Code Quality Checks | Installs dependencies and produces the production web build (no test step)           |
+
+There is currently no CI job for the ML service or the mobile app.
 
 ## Documentation
 
-| Document                    | Path                 | Description                                                    |
-| :-------------------------- | :------------------- | :------------------------------------------------------------- |
-| **README**                  | `README.md`          | High-level overview, project scope, and repository entry point |
-| **Installation Guide**      | `INSTALLATION.md`    | Step-by-step installation and environment setup                |
-| **API Reference**           | `API.md`             | Detailed documentation for all API endpoints                   |
-| **CLI Reference**           | `CLI.md`             | Command-line interface usage, commands, and examples           |
-| **User Guide**              | `USAGE.md`           | Comprehensive end-user guide, workflows, and examples          |
-| **Architecture Overview**   | `ARCHITECTURE.md`    | System architecture, components, and design rationale          |
-| **Configuration Guide**     | `CONFIGURATION.md`   | Configuration options, environment variables, and tuning       |
-| **Feature Matrix**          | `FEATURE_MATRIX.md`  | Feature coverage, capabilities, and roadmap alignment          |
-| **Contributing Guidelines** | `CONTRIBUTING.md`    | Contribution workflow, coding standards, and PR requirements   |
-| **Troubleshooting**         | `TROUBLESHOOTING.md` | Common issues, diagnostics, and remediation steps              |
+| Document                                           | Contents                               |
+| :------------------------------------------------- | :------------------------------------- |
+| [docs/README.md](docs/README.md)                   | Documentation index                    |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)       | System architecture                    |
+| [docs/API.md](docs/API.md)                         | REST API reference                     |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md)       | Setup for all components               |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)     | Environment variables and config       |
+| [docs/USAGE.md](docs/USAGE.md)                     | Running and using the platform         |
+| [docs/CLI.md](docs/CLI.md)                         | Helper scripts reference               |
+| [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md)   | Feature status, implemented vs planned |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes                |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)       | Contribution guide                     |
+| [docs/examples/](docs/examples/)                   | Worked examples                        |
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## License
 
